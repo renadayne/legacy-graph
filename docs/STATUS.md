@@ -63,3 +63,9 @@
 - Extras: word == directory name -> scope; captions found verbatim in free query text count as quoted; duplicates prefer pinned/scope files.
 - Extractor/resolver: resource/message ids used in bodies become refs (target "IDS_X"), so `AfxMessageBox(IDS_X)` is findable.
 - Tests: `tests/test_explore_seed.py` (19, LegacyApp + BigApp).
+
+## S6 — ranking + spine
+- New `mfcgraph_core/explore_rank.py`: `rank(graph, seeds, scope_dirs) -> (scores{node:float}, spine[[node]])`. PPR (restart 0.3, 20 it.)
+  on radius-3 subgraph, conf-weighted edges, class<->method edge 0.3, externals never entered; out-of-scope x0.2; spine x2.
+- Spine: forward shortest paths (<=6) between top-4 function seeds; lone seed -> path from nearest UI/msg-handler entry.
+- Seed tweak: ctor/dtor no longer get word matches (name = class name). Tests: `tests/test_explore.py` (6).
