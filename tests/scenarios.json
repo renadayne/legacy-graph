@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "query": "bấm Tính lại thì tổng tiền sai trong module Billing",
+    "must_include": [
+      "CInvoiceDlg::OnBnClickedRecalc",
+      "CInvoiceDoc::RecalcTotal",
+      "CInvoiceDoc::CalcLineAmount"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 2,
+    "query": "thông báo \"Không thể lưu hóa đơn\" khi bấm OK",
+    "must_include": [
+      "CInvoiceDlg::OnOK",
+      "CInvoiceDoc::SaveInvoice"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 3,
+    "query": "Billing/InvoiceDlg.cpp:68",
+    "must_include": [
+      "CInvoiceDlg::OnBnClickedClearDiscount"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 4,
+    "query": "m_dDiscount bị ghi đè khi đổi khách hàng",
+    "must_include": [
+      "CInvoiceDlg::OnCbnSelchangeCustomer",
+      "CInvoiceDlg::DoDataExchange"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 5,
+    "query": "ID_BILLING_OPTIONS",
+    "must_include": [
+      "CMainFrame::OnBillingOptions"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 6,
+    "query": "log shows Customer 42 not found",
+    "must_include": [
+      "CCustomerList::FindById"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 7,
+    "query": "\"Báo cáo không có dữ liệu\"",
+    "must_include": [
+      "CReportBuilder::BuildMonthly"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 8,
+    "query": "selecting an invoice line in the list does not update the amount",
+    "must_include": [
+      "CInvoiceView::OnItemChangedLines",
+      "CInvoiceView::UpdateAmountLabel"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 9,
+    "query": "payment done but invoice view not refreshed WM_APP_PAYMENT_DONE",
+    "must_include": [
+      "CInvoiceView::OnPaymentDone",
+      "PaymentThreadProc"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 10,
+    "query": "Report/ReportBuilder.cpp RoundTo",
+    "must_include": [
+      "RoundTo@Report/ReportBuilder.cpp"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 11,
+    "query": "CReportExporter::ExportPdf fails",
+    "must_include": [
+      "CReportExporter::ExportPdf"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 12,
+    "query": "FormatMoney prints wrong decimals",
+    "must_include": [
+      "FormatMoney"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 13,
+    "query": "VAT rate not saved after CTaxPage::OnApply",
+    "must_include": [
+      "CTaxPage::OnApply",
+      "CAppSettings::Save"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 14,
+    "query": "chart is blank in monthly report view",
+    "must_include": [
+      "CReportView::OnDraw",
+      "CChartWnd::DrawChart"
+    ],
+    "max_chars": 8000
+  }
+]
