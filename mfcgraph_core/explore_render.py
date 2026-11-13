@@ -8,6 +8,8 @@ Interface:
     render_source(graph, plans) -> str               "## Source" section
     flow_section(graph, spine, sr) / blast_section(graph, nodes) / not_shown_section(graph, nodes)
     did_you_mean_section(sr) -> str                  "" when nothing to say
+    changed_files(graph, file_indices) -> [fi]       size/mtime differ from the index (S10)
+    changed_banner(graph, changed) -> str            "⚠ Changed since last index: …; re-run index"
 
 Allocation (why):
   * Files are weighted by the summed score of their chosen functions; a file under MIN_FILE_FRAC (15%) of the top
@@ -20,6 +22,8 @@ Allocation (why):
     functions), else signature. Low-score functions off the spine get full code only if it fits the remaining
     share (they are processed last), otherwise the signature only — never a window.
 """
+import os
+
 from .explore_windows import windows_for, render, signature_only
 
 MIN_FILE_FRAC = 0.15
@@ -52,6 +56,35 @@ def loc(g, n):
     if 0 <= n.file < len(g.files):
         return "%s:%d" % (g.files[n.file].path, n.line)
     return ""
+
+
+def changed_files(g, file_indices):
+    """Files whose size or mtime differs from the index (v1 indexes have no stamps: never reported)."""
+    out = []
+    for fi in sorted(set(file_indices)):
+        if not (0 <= fi < len(g.files)):
+            continue
+        f = g.files[fi]
+        if f.size < 0:
+            continue
+        p = os.path.join(g.root, *f.path.split("/"))
+        try:
+            st = os.stat(p)
+        except OSError:
+            out.append(fi)
+            continue
+        if st.st_size != f.size or int(st.st_mtime) != f.mtime:
+            out.append(fi)
+    return out
+
+
+def changed_banner(g, changed):
+    if not changed:
+        return ""
+    names = [g.files[fi].path for fi in changed[:8]]
+    more = "" if len(changed) <= 8 else ", … %d more" % (len(changed) - 8)
+    return "⚠ Changed since last index: %s%s; re-run index (code of these files not shown)\n" % (
+        ", ".join(names), more)
 
 
 def has_code(n):
@@ -140,14 +173,20 @@ def plan_function(g, lines, fi, node, score, avail, exact, low, sr, chosen_set):
     return None, 0
 
 
-def allocate(g, chosen, sr, spine, src_budget, top_score):
+def allocate(g, chosen, sr, spine, src_budget, top_score, skip_files=()):
+    """skip_files: files that must not show code (changed since index): their functions go to not_shown."""
     on_spine = {n for p in spine for n in p}
+    skip = set(skip_files)
+    skipped = [n for n, _ in chosen if g.nodes[n].file in skip]
+    chosen = [(n, s) for n, s in chosen if g.nodes[n].file not in skip]
     chosen_set = {n for n, _ in chosen}
     by_file = {}
     for n, s in chosen:
         by_file.setdefault(g.nodes[n].file, []).append((n, s))
     weight = {fi: sum(s for _, s in lst) for fi, lst in by_file.items()}
     for fi in sr.file_focus:
+        if fi in skip:
+            continue
         weight.setdefault(fi, 0.0)
         by_file.setdefault(fi, [])
     top_w = max(weight.values() or [1.0]) or 1.0
@@ -157,7 +196,7 @@ def allocate(g, chosen, sr, spine, src_budget, top_score):
     order = sorted(weight, key=lambda fi: (-weight[fi], fi))
     keep = [fi for fi in order if weight[fi] >= MIN_FILE_FRAC * top_w or fi in sr.pinned_files
             or any(n in sr.exact for n, _ in by_file[fi])]
-    not_shown = [n for fi in order if fi not in keep for n, _ in by_file[fi]]
+    not_shown = skipped + [n for fi in order if fi not in keep for n, _ in by_file[fi]]
     while len(keep) > 1 and len(keep) * MIN_FILE_CHARS > src_budget:
         fi = keep.pop()
         not_shown.extend(n for n, _ in by_file[fi])
