@@ -90,11 +90,15 @@ def explore(g, query, budget=None, scope=None):
     flow = R.flow_section(g, spine, sr, top_func)
     blast_nodes = [n for n, _ in chosen if n in sr.exact or n in sr.seeds][:3] or [n for n, _ in chosen[:1]]
     blast = R.blast_section(g, blast_nodes)
-    fixed = HEADER_RESERVE + len(flow) + len(blast) + len(dym)
+    files = {g.nodes[n].file for n, _ in chosen} | set(sr.file_focus)
+    changed = R.changed_files(g, files)
+    banner = R.changed_banner(g, changed)
+    fixed = HEADER_RESERVE + len(flow) + len(blast) + len(dym) + len(banner)
     src_budget = max(R.MIN_FILE_CHARS, budget - fixed - 4 * 70)
     best = None
     for _ in range(GROW_ROUNDS):  # grow the source share while the whole result still has room
-        out, plans, not_shown = _build(g, sr, spine, chosen, top_score, src_budget, budget, flow, blast, dym)
+        out, plans, not_shown = _build(g, sr, spine, chosen, top_score, src_budget, budget, flow, blast, dym,
+                                       changed, banner)
         if len(out) <= budget and (best is None or len(out) > len(best)):
             best = out
         room = budget - len(out)
@@ -105,24 +109,24 @@ def explore(g, query, budget=None, scope=None):
         for _ in range(MAX_SHRINK_ROUNDS):
             if len(out) <= budget or not _shrink_once(g, plans, not_shown, sr):
                 break
-            out = _render_all(g, sr, plans, not_shown, budget, flow, blast, dym)
+            out = _render_all(g, sr, plans, not_shown, budget, flow, blast, dym, banner)
         best = out
     return _fit(best, budget)
 
 
-def _render_all(g, sr, plans, not_shown, budget, flow, blast, dym):
+def _render_all(g, sr, plans, not_shown, budget, flow, blast, dym, banner=""):
     nfuncs = sum(len(fp.funcs) for fp in plans)
     return _assemble(budget, sr.scope_dirs, flow, R.render_source(g, plans), nfuncs, len(plans), blast,
-                     R.not_shown_section(g, not_shown), dym)
+                     R.not_shown_section(g, not_shown), dym, banner)
 
 
-def _build(g, sr, spine, chosen, top_score, src_budget, budget, flow, blast, dym):
-    plans, not_shown = R.allocate(g, chosen, sr, spine, src_budget, top_score)
+def _build(g, sr, spine, chosen, top_score, src_budget, budget, flow, blast, dym, changed=(), banner=""):
+    plans, not_shown = R.allocate(g, chosen, sr, spine, src_budget, top_score, changed)
     shown = {f.node for fp in plans for f in fp.funcs}
     score = dict(chosen)
     not_shown = sorted({n for n, _ in chosen if n not in shown} | set(not_shown),
                        key=lambda n: (-score.get(n, 0.0), n))
-    return _render_all(g, sr, plans, not_shown, budget, flow, blast, dym), plans, not_shown
+    return _render_all(g, sr, plans, not_shown, budget, flow, blast, dym, banner), plans, not_shown
 
 
 def _fit(text, budget):

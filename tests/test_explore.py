@@ -136,6 +136,28 @@ def test_mcp():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def test_changed_files():
+    import shutil
+    import tempfile
+    from mfcgraph_core.explore import explore
+    tmp = tempfile.mkdtemp(prefix="mfcgraph_s10_")
+    try:
+        root = os.path.join(tmp, "app")
+        shutil.copytree(os.path.join(ROOT, "samples", "LegacyApp"), root)
+        g = build_index(root)
+        out = explore(g, "Export failed WriteTextFile")
+        check("Changed since last index" not in out, "S10: no banner when nothing changed")
+        with open(os.path.join(root, "Util.cpp"), "ab") as fh:
+            fh.write(b"\n// edited\n")
+        out = explore(g, "Export failed WriteTextFile")
+        check(out.splitlines()[2].startswith("⚠ Changed since last index: Util.cpp; re-run index"), "S10: banner",
+              out[:400])
+        check("### Util.cpp" not in out and "util::WriteTextFile  Util.cpp:35" in out, "S10: changed file names only")
+        check("### MainFrm.cpp" in out, "S10: unchanged files still shown")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     test_rank()
     for t in [globals().get(n) for n in sorted(globals()) if n.startswith("test_") and n != "test_rank"]:

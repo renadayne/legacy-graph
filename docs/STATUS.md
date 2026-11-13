@@ -88,3 +88,7 @@
 - Tuning (each a general rule): low-score functions get full code when it fits the remaining share (unused budget = waste);
   words also match segments of handled id names (IDC_LIST_LINES); Vietnamese symptom phrases ("thông báo", "bấm nút"…) dropped.
 - Tried capping code files to src/(2·600): worse at 3000 → reverted.
+
+## S10 — changed-file warning
+- explore compares size/mtime of files it would print with the index (`explore_render.changed_files`); changed files: banner
+  `⚠ Changed since last index: …; re-run index (code of these files not shown)` and their functions go to Not shown. v1 index: no check.
