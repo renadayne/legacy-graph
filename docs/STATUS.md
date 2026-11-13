@@ -69,3 +69,9 @@
   on radius-3 subgraph, conf-weighted edges, class<->method edge 0.3, externals never entered; out-of-scope x0.2; spine x2.
 - Spine: forward shortest paths (<=6) between top-4 function seeds; lone seed -> path from nearest UI/msg-handler entry.
 - Seed tweak: ctor/dtor no longer get word matches (name = class name). Tests: `tests/test_explore.py` (6).
+
+## S7b — budget allocation + assembly
+- New `mfcgraph_core/explore.py`: `explore(graph, query, budget=None, scope=None) -> str` (parse → seed → rank → render).
+- New `mfcgraph_core/explore_render.py`: default_budget (8k/12k/16k), select_functions, allocate (file weight, 15% cut, min 600, max 70%,
+  exact full first, windows, signatures), Flow / Source / Blast radius / Not shown / Did you mean sections (≤10 lines each).
+- Budget is hard: source share grows while room remains, then lowest-priority functions degrade (full→window→sig→dropped).
