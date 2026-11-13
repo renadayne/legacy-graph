@@ -99,6 +99,7 @@ class RawData:
         self.uiitems = []    # dict(file, kind, owner, label, id, line)
         self.strings = []    # (file, id, text, line)
         self.unknown_macros = {}
+        self.failed = []     # relative paths skipped because extraction raised (see index.build_index)
 
 
 class Node:

@@ -110,6 +110,9 @@ def lex(src, rc_mode):
     return out
 
 
+_MACRO_NAME = re.compile(r"[A-Za-z_]\w*")
+
+
 def _is_false_cond(rest):
     r = rest.strip()
     return r in ("0", "(0)", "FALSE")
@@ -133,8 +136,11 @@ def filter_conditionals(tokens, macros=None, stats=None):
                 key = "evaluated" if false else "guessed"
                 stats[key] = stats.get(key, 0) + 1
             return not false
-        name = rest.strip().split("(")[0].split()[0] if rest.strip() else ""
-        if word == "ifdef":
+        m = _MACRO_NAME.search(rest)  # "#ifdef (FOO)", "#ifdef  FOO", or a malformed "#ifdef"
+        name = m.group(0) if m else ""
+        if not name and word in ("ifdef", "ifndef"):
+            r = None
+        elif word == "ifdef":
             r = macros.ifdef(name)
         elif word == "ifndef":
             r = macros.ifdef(name)

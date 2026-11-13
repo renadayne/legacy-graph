@@ -66,6 +66,43 @@ def test_filter():
     check(kept(src3, PPConfig({"A": "1"}, {"B"}).for_file(False)) == "anb ;", "nested")
 
 
+def test_malformed():
+    src = ("#ifdef (FOO)\na ;\n#endif\n#ifdef /* c */ BAR\nb ;\n#endif\n#ifndef\nc ;\n#endif\n#if\nd ;\n#endif\n"
+           "#ifdef\ne ;\n#else\nf ;\n#endif\n")
+    st = {}
+    out = kept(src, PPConfig({"FOO": "1"}, (), True).for_file(False), st)
+    check(out == "a ; c ; d ; e ;", "malformed #ifdef/#if do not crash", out)
+    check(kept(src) == "a ; b ; c ; d ; e ;", "malformed, no config")
+
+
+def test_skip_failing_file():
+    from mfcgraph_core import index as idx
+    tmp = tempfile.mkdtemp(prefix="mfcgraph_fail_")
+    real = idx.extract_cpp
+    try:
+        for name, body in (("Good.cpp", "void Good() { Bad(); }\n"), ("Bad.cpp", "void Bad() { }\n")):
+            with open(os.path.join(tmp, name), "w") as fh:
+                fh.write(body)
+
+        def boom(toks, fi, raw):
+            if any(t[1] == "Bad" for t in toks[:3]):
+                raw.funcs.append(None)  # partial state must be rolled back
+                raise IndexError("simulated")
+            return real(toks, fi, raw)
+        idx.extract_cpp = boom
+        import io
+        import contextlib
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            g = build_index(tmp)
+        check("warning: skipped Bad.cpp (IndexError: simulated)" in err.getvalue(), "warning printed", err.getvalue())
+        check(g.stats.get("files.failed") == "1" and any(n.name == "Good" for n in g.nodes), "other files indexed")
+        check("files skipped because of an internal error: 1" in q_diagnose(g), "diagnose counts skipped files")
+    finally:
+        idx.extract_cpp = real
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def test_index_win32():
     tmp = tempfile.mkdtemp(prefix="mfcgraph_pp_")
     try:
@@ -94,6 +131,8 @@ def test_index_win32():
 def main():
     test_eval()
     test_filter()
+    test_malformed()
+    test_skip_failing_file()
     test_index_win32()
     print("pp: %d passed, %d failed" % (passed, failed))
     return 1 if failed else 0
