@@ -6,12 +6,14 @@ import os
 import shutil
 import sys
 import tempfile
+import unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 
 from mfcgraph_core.index import build_index, save_graph, load_graph  # noqa: E402
+from mfcgraph_core.query import q_search  # noqa: E402
 
 SAMPLES = os.path.join(ROOT, "samples", "LegacyApp")
 passed = 0
@@ -47,6 +49,13 @@ def test_v2_roundtrip(g, tmp):
     check((fe, 69, "Export failed") in g2.texts, "S2b: text attached to function node")
 
 
+def test_search_text(g):
+    out = q_search(g, "export FAILED", 40)
+    check('[text] "Export failed"  CMainFrame::OnFileExport  MainFrm.cpp:69' in out, "S2c: search by text", out)
+    out = q_search(g, unicodedata.normalize("NFD", '"chưa nhập"'), 40)
+    check("CExportDlg::OnOK  ExportDlg.cpp:67" in out, "S2c: Vietnamese text matched after NFC", out)
+
+
 def test_v1_load():
     g = load_graph(os.path.join(HERE, "data", "legacy_v1.mfg"))
     check(len(g.nodes) > 100 and g.texts == [], "S2b: v1 index loads (texts empty)")
@@ -58,6 +67,7 @@ def main():
     try:
         g = build_index(SAMPLES, 1258)
         test_v2_roundtrip(g, tmp)
+        test_search_text(g)
         test_v1_load()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
