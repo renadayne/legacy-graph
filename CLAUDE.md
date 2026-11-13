@@ -24,6 +24,14 @@ Work plan: `docs/PLAN.md` (do ONE step at a time). Background: `docs/research-co
 - Index format is versioned (`MFCGRAPH\t<ver>`); bump the version and keep loading older versions.
 - Every behaviour change needs a test in `tests/`; all tests must pass before a step is done.
 
+## Environment: Claude Code cloud on the user's GitHub repo
+- Work on the session's branch (e.g. `claude/...`), never directly on `main` unless the user says so.
+- One commit per step on that branch; push after every step. Keep one PR open for the branch
+  (create it after the first pushed step if the session can; otherwise tell the user the branch name).
+- Do not rewrite pushed history (no rebase/amend/force-push of pushed commits).
+- No package installs are needed (stdlib only). If network to github.com is unavailable for reference
+  repos, rely on `docs/research-codegraph.md` instead.
+
 ## Finishing a step (always, automatically)
 1. All tests pass (`python3 tests/test_mfcgraph.py` + any step-specific tests).
 2. Append ≤6 lines to `docs/STATUS.md`.

@@ -2,6 +2,13 @@
 
 > Dành cho Claude Code. Mỗi lần **chỉ làm một step**. Đọc mục 1–3 một lần; khi làm step nào thì chỉ đọc mục của step đó và phụ lục nó trỏ tới.
 
+## 0. Môi trường chạy
+
+- Chạy bằng **Claude Code cloud** trên repo GitHub có sẵn của người dùng. Repo đã chứa code v0.1, `CLAUDE.md` và file này.
+- Làm việc trên **nhánh của phiên** (ví dụ `claude/...`), không làm thẳng trên `main`. Mỗi step là một commit trên nhánh đó, push ngay sau mỗi step, và giữ một pull request mở cho nhánh. Người dùng tự merge vào `main`.
+- Một phiên có thể làm nhiều step liên tiếp. Nếu phiên mới bắt đầu giữa chừng, đọc `docs/STATUS.md` để biết step tiếp theo.
+- Câu lệnh khởi động gợi ý: *"Đọc CLAUDE.md và docs/PLAN.md, rồi làm step tiếp theo theo docs/STATUS.md."*
+
 ## 1. Mục tiêu v0.2
 
 Dev chỉ khoanh được vùng bug trong một module lớn. Copilot cần một **bản đồ** để tìm đúng chỗ, với ít token. v0.1 đã có dữ liệu đồ thị MFC tốt (menu → ID → message map → handler, DDX, PostMessage…), nhưng đưa cho agent 9 tool rời rạc. v0.2 làm theo mô hình CodeGraph (xem `docs/research-codegraph.md`):
