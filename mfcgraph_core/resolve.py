@@ -539,6 +539,8 @@ class Resolver:
             if f.ddx and owner >= 0:
                 for (macro, did, member, line) in f.ddx:
                     self.add_edge(owner, self.id_node(did), "binds", f.file, line, "exact", macro + " " + member)
+            for (line, text) in f.strings:
+                self.g.texts.append((src, line, text))
 
     def make_includes(self):
         by_base = {}

@@ -16,3 +16,8 @@
 - `RawFunc.strings = [(line, text)]`, filled by `CppWalker.scan_strings` (adjacent literals joined, whitespace collapsed).
 - `extract_cpp.clean_literal(text)`: "" if < 3 letters after removing escapes/printf specs; cut at 200 chars.
 - New `tests/test_extract.py` (extractor unit checks). Note: "Export failed" is MainFrm.cpp:69 (PLAN said 68).
+
+## S2b — index format v2
+- Header `MFCGRAPH\t2`; `F` gets trailing `mtime size`; new `T\tfunc\tline\ttext`. `load_graph` reads v1 and v2.
+- `Graph.texts = [(func_node, line, text)]` (filled in `Resolver.make_calls`); `SrcFile.mtime/size` (v1: 0 / -1).
+- Tests: `tests/test_index.py` (+ `tests/data/legacy_v1.mfg` made with v1 code). `tests/run_all.py` runs every suite.
