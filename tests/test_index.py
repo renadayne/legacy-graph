@@ -49,6 +49,21 @@ def test_v2_roundtrip(g, tmp):
     check((fe, 69, "Export failed") in g2.texts, "S2b: text attached to function node")
 
 
+def test_refs(g, tmp):
+    def fn(r):
+        return g.nodes[r[0]].qname
+    w = sorted(fn(r) for r in g.refs if r[2] == "CExportDlg::m_strPath" and r[3] == "w")
+    check("CExportDlg::DoDataExchange" in w and "CExportDlg::OnBnClickedBrowse" in w,
+          "S3b: m_strPath written by DDX and OnBnClickedBrowse", w)
+    r = [fn(x) for x in g.refs if x[2] == "CExportDlg::m_strPath" and x[3] == "r"]
+    check("CMainFrame::OnFileExport" in r, "S3b: dlg.m_strPath resolved via local variable type", r)
+    r = [fn(x) for x in g.refs if x[2] == "CLegacyDoc::m_values"]
+    check("CLegacyView::OnDraw" in r, "S3b: pDoc->m_values resolved", r)
+    path = os.path.join(tmp, "refs.mfg")
+    save_graph(g, path)
+    check(load_graph(path).refs == g.refs and g.refs, "S3b: refs survive save/load")
+
+
 def test_search_text(g):
     out = q_search(g, "export FAILED", 40)
     check('[text] "Export failed"  CMainFrame::OnFileExport  MainFrm.cpp:69' in out, "S2c: search by text", out)
@@ -68,6 +83,7 @@ def main():
         g = build_index(SAMPLES, 1258)
         test_v2_roundtrip(g, tmp)
         test_search_text(g)
+        test_refs(g, tmp)
         test_v1_load()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

@@ -4,6 +4,7 @@ The index is plain text (one record per line, tab separated, escaped), so it is 
 v1 is the format of the frozen C++ edition; v2 (Python, v0.2) adds:
   F record: two trailing columns mtime (int seconds) and size (bytes) of the source file at index time.
   T<TAB>func_node<TAB>line<TAB>text   string literal found in the body of function node func_node.
+  R<TAB>func_node<TAB>line<TAB>target<TAB>mode   variable reference; target "Class::field" or "g_x"; mode r|w.
 load_graph reads v1 and v2 (v1: texts empty, mtime 0, size -1).
 """
 import hashlib
@@ -128,6 +129,8 @@ def save_graph(g, path):
                                                         _esc(e.extra)))
     for (fn, line, text) in g.texts:
         lines.append("T\t%d\t%d\t%s" % (fn, line, _esc(text)))
+    for (fn, line, target, mode) in g.refs:
+        lines.append("R\t%d\t%d\t%s\t%s" % (fn, line, _esc(target), mode))
     for k in sorted(g.stats):
         lines.append("S\t%s\t%s" % (_esc(k), _esc(g.stats[k])))
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
@@ -164,6 +167,8 @@ def load_graph(path):
             g.files.append(sf)
         elif tag == "T" and len(f) >= 4:
             g.texts.append((int(f[1]), int(f[2]), f[3]))
+        elif tag == "R" and len(f) >= 5:
+            g.refs.append((int(f[1]), int(f[2]), f[3], f[4]))
         elif tag == "S" and len(f) >= 3:
             g.stats[f[1]] = f[2]
         elif tag == "MFCGRAPH":
@@ -180,7 +185,7 @@ def load_graph(path):
     for e in g.edges:
         if not (0 <= e.src < nn and 0 <= e.dst < nn):
             raise ValueError("corrupt index (edges)")
-    for t in g.texts:
+    for t in g.texts + g.refs:
         if not 0 <= t[0] < nn:
             raise ValueError("corrupt index (texts)")
     g.build_adjacency()
