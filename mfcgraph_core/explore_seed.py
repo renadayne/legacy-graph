@@ -48,7 +48,7 @@ W_REF_READ = 2.0      # function reading a named field
 W_NEAR_CALL = 0.6     # function called in the NEAR_CALL_LINES lines before a matched message literal
 NEAR_CALL_LINES = 3
 W_CASE_CALL = 0.6     # function called inside `case ID:` of a window procedure (fraction of the id weight)
-MIN_CAPTION = 4       # shortest caption matched inside free query text
+MIN_CAPTION = 4       # shortest caption matched inside free query text (text_len: CJK characters count 2)
 
 _SEG = re.compile(r"[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|\d+")
 
@@ -57,9 +57,17 @@ def norm(s):
     return unicodedata.normalize("NFC", s).casefold()
 
 
+_MNEMONIC = re.compile(r"\(&\w\)")   # CJK menus: "保存(&S)"
+
+
 def clean_caption(s):
-    s = s.split("\t")[0].replace("&", "")
-    return s.strip().rstrip(".").strip()
+    s = _MNEMONIC.sub("", s.split("\t")[0]).replace("&", "")
+    return s.strip().rstrip(".").rstrip("…").strip()
+
+
+def text_len(s):
+    """Length for 'is this caption long enough to match on its own': a CJK character counts 2 (it is a word)."""
+    return sum(2 if ord(c) >= 0x2E80 else 1 for c in s)
 
 
 def segments(name):
@@ -278,6 +286,8 @@ class _Seeder:
                 any_hit = True
         for (fn, line, mode) in self.ref_targets.get(name, ()):
             self.add(fn, w * 0.8, "uses " + reason, line)
+            if name.startswith(("IDS_", "IDP_")):  # message from the string table: shown after the failing call
+                self.seed_calls_before(fn, line)
             any_hit = True
         return any_hit
 
@@ -332,7 +342,7 @@ class _Seeder:
                 self.seed_calls_before(fn, line)
                 hit = True
         for cap in self.caption_targets():
-            if q == cap[0] or (len(q) >= MIN_CAPTION and q in cap[0]):
+            if q == cap[0] or (text_len(q) >= MIN_CAPTION and q in cap[0]):
                 hit = self.seed_caption(cap, W_QUOTED, "caption") or hit
         return hit
 
@@ -351,7 +361,7 @@ class _Seeder:
         done = set()
         for cap in self.caption_targets():
             c = cap[0]
-            if len(c) < MIN_CAPTION or (c, cap[2]) in done:
+            if text_len(c) < MIN_CAPTION or (c, cap[2]) in done:
                 continue
             if re.search(r"(?<!\w)" + re.escape(c) + r"(?!\w)", self.qtext):
                 done.add((c, cap[2]))

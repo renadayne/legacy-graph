@@ -145,3 +145,9 @@
   (class names, ctors, already-linked calls skipped); callbacks inside `case ID:` → id --case_calls--> proc.
 - explore: entry path prefers the queried ids; shared IDOK shown only for this proc's dialogs; calls ≤3 lines before a matched
   message literal seeded (W_NEAR_CALL 0.6). Win32App 0.885, BigApp 1.000. 20k files: index 15.3 s, 470 MB. Tests: test_win32 (27).
+
+## S20 — Win32 evaluation + tuning
+- `tests/eval_explore.py --win32` (Win32App, codepage 932, --undef-unknown) added to run_all; `--codepage`, `--undef-unknown` options.
+- Tuning (general rules): CJK menu mnemonics "(&S)" stripped from captions; CJK chars count 2 for the min caption length;
+  calls just before a STRINGTABLE message use (IDS_/IDP_) are seeded like literal messages.
+- Recall @8000: Win32App 1.000 (13/13 in budget), BigApp 1.000. @4000: 0.936 / 0.905; @3000: 0.897 / 0.869.
