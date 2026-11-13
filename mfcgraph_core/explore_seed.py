@@ -21,6 +21,8 @@ Weights (tuned in S9; every number is a general principle, not a fit to one samp
          a word hitting more than WORD_MAX_HITS nodes is scaled by WORD_MAX_HITS / hits.
 A word equal to a directory name of the tree (e.g. "billing") adds that directory to scope_dirs:
 developers name the module they suspect.
+A function called up to NEAR_CALL_LINES lines before a matched message literal also gets W_QUOTED * W_NEAR_CALL:
+the message is usually shown right after the failing call.
 Captions (menu items, dialog captions, button texts, string table) that appear verbatim inside the query text
 count like a quoted term, so `bấm Tính lại thì ...` finds the "Tính lại" button without quotes.
 """
@@ -43,6 +45,8 @@ WORD_CAP = 3.0
 WORD_MAX_HITS = 40    # a word matching more nodes than this has its weight spread over them
 W_REF_WRITE = 5.0     # function writing a named field
 W_REF_READ = 2.0      # function reading a named field
+W_NEAR_CALL = 0.6     # function called in the NEAR_CALL_LINES lines before a matched message literal
+NEAR_CALL_LINES = 3
 W_CASE_CALL = 0.6     # function called inside `case ID:` of a window procedure (fraction of the id weight)
 MIN_CAPTION = 4       # shortest caption matched inside free query text
 
@@ -325,11 +329,21 @@ class _Seeder:
             if q in norm(text):
                 self.add(fn, W_QUOTED, 'contains "%s"' % text[:40], line)
                 self.texts.append((fn, line, text))
+                self.seed_calls_before(fn, line)
                 hit = True
         for cap in self.caption_targets():
             if q == cap[0] or (len(q) >= MIN_CAPTION and q in cap[0]):
                 hit = self.seed_caption(cap, W_QUOTED, "caption") or hit
         return hit
+
+    def seed_calls_before(self, fn, line):
+        """An error message usually follows the failing call: `if (!ExportCsv(..)) MessageBox(..)`."""
+        g = self.g
+        for ei in g.out[fn]:
+            e = g.edges[ei]
+            if (e.kind == "calls" and g.nodes[e.dst].kind == "function"
+                    and line - NEAR_CALL_LINES <= e.line <= line):
+                self.add(e.dst, W_QUOTED * W_NEAR_CALL, "called just before the message", e.line)
 
     def captions_in_text(self):
         if not self.qtext:

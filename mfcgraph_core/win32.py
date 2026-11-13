@@ -13,9 +13,25 @@ Interface:
           menu -> IDM_X -> WndProc -> DoX is visible and ranking reaches DoX
         * HANDLE_MSG -> WM_X --handled_by--> Fn (exact) and proc --calls--> Fn; Fn flagged msg-handler
         * functions whose signature has WPARAM and LPARAM get the flag "win32-proc" (called by Windows)
-Why heuristics here: a window procedure is ordinary C code; the switch on msg / LOWORD(wParam) IS its message map.
+    scan_wiring(walker, f, b, e)     extractor side:
+        f.dialog_procs += [(idd, proc, line)]   DialogBox / DialogBoxParam / CreateDialog / CreateDialogParam
+        f.fnrefs       += [(name, line)]        identifiers used as values (argument, assignment, cast target) that
+                                                may name a function: lpfnWndProc = X, SetTimer(.., X), CreateThread(.., X ..)
+    make_wiring(resolver)            resolver side:
+        * proc --uses_dialog--> dialog IDD (exact): dialog captions / controls lead to the procedure
+        * function --callback--> function for every fnref that resolves to a function (same file first, else unique)
+Why heuristics here: a window procedure is ordinary C code; the switch on msg / LOWORD(wParam) IS its message map,
+and function pointers handed to Windows are its "who calls this".
 """
+import re
 from .lexer import IDENT, PUNCT
+
+DIALOG_APIS = frozenset(["DialogBox", "DialogBoxParam", "DialogBoxW", "DialogBoxA", "DialogBoxParamW",
+                         "DialogBoxParamA", "CreateDialog", "CreateDialogParam", "CreateDialogW", "CreateDialogA",
+                         "CreateDialogParamW", "CreateDialogParamA"])
+_CAPS = re.compile(r"^[A-Z0-9_]+$")
+_VALUE_BEFORE = frozenset(["(", ",", "=", ")"])
+_VALUE_AFTER = frozenset([",", ")", ";"])
 
 COMMAND_PARENTS = frozenset(["WM_COMMAND", "WM_NOTIFY", "WM_SYSCOMMAND", "WM_MENUCOMMAND"])
 
@@ -90,6 +106,43 @@ def scan_switches(w, f, b, e):
                 f.crackers.append((w.arg_text(args[1]), w.arg_text(args[2]), t[x][2]))
 
 
+def scan_wiring(w, f, b, e):
+    from .extract_cpp import KEYWORDS  # late import: extract_cpp imports this module
+    t = w.t
+    seen = set()
+    for x in range(b, e):
+        k, s, line = t[x]
+        if k != IDENT:
+            continue
+        if s in DIALOG_APIS and w.is_p(x + 1, "("):
+            args = w.split_args(x + 1)
+            if len(args) >= 4:
+                idd = [t[j][1] for j in args[1] if t[j][0] == IDENT and t[j][1].startswith("IDD")]
+                proc = [t[j][1] for j in args[3] if t[j][0] == IDENT and not _CAPS.match(t[j][1])]
+                if idd and proc:
+                    f.dialog_procs.append((idd[0], proc[-1], line))
+            continue
+        if x - 1 < b or x + 1 >= e or _CAPS.match(s) or len(s) < 3 or s in KEYWORDS:
+            continue
+        pk, ps, _ = t[x - 1]
+        nk, ns, _ = t[x + 1]
+        if pk != PUNCT or ps not in _VALUE_BEFORE or nk != PUNCT or ns not in _VALUE_AFTER:
+            continue
+        if ps == ")" and not _is_cast_close(w, x - 1):
+            continue
+        if ps == "=" and x - 2 >= b and t[x - 2][0] == PUNCT and t[x - 2][1] in ("=", "!", "<", ">"):
+            continue
+        if s not in seen:
+            seen.add(s)
+            f.fnrefs.append((s, line))
+
+
+def _is_cast_close(w, i):
+    """`(TYPE)X` — the ')' at i closes a parenthesised type like (LONG_PTR) or (DLGPROC)."""
+    m = w.pm[i]
+    return m >= 0 and i - m == 2 and w.t[m + 1][0] == IDENT
+
+
 # ---------------------------------------------------------------- resolver side
 def _is_proc_sig(sig):
     return "WPARAM" in sig and "LPARAM" in sig
@@ -119,6 +172,58 @@ def _find_handler(r, src, name, file):
     if len(defs) == 1:
         return defs[0]
     return None
+
+
+def make_wiring(r):
+    g = r.g
+    nodes = g.nodes
+    linked_from = {}  # src -> {dst} for calls/callback edges, built once (avoid scanning all edges per function)
+    for e in g.edges:
+        if e.kind in ("calls", "callback"):
+            linked_from.setdefault(e.src, set()).add(e.dst)
+    for fi, f in enumerate(r.r.funcs):
+        if not f.is_def:
+            continue
+        src = r.func_node.get(fi)
+        if src is None:
+            continue
+        for (idd, proc, line) in f.dialog_procs:
+            h = _find_handler(r, src, proc, f.file)
+            if h is None:
+                continue
+            dlg = r.dialogs.get(idd)
+            r.add_edge(h, dlg if dlg is not None else r.id_node(idd), "uses_dialog", f.file, line, "exact",
+                       "%s@%s" % (idd, nodes[src].name))
+            r.add_edge(src, h, "callback", f.file, line, "heuristic", "dialog " + idd)
+            linked_from.setdefault(src, set()).add(h)
+            r.wiring_links += 1
+            f.wired.append((h, line))
+        linked = linked_from.setdefault(src, set())
+        for (name, line) in f.fnrefs:
+            if name in r.class_by_name:
+                continue  # RUNTIME_CLASS(CFoo), (CFoo*)p: a class name, not a function pointer
+            h = _find_handler(r, src, name, f.file)
+            if h is None or h == src or h in linked:
+                continue
+            n = nodes[h]
+            if n.owner >= 0 and n.name.lstrip("~") == nodes[n.owner].name:
+                continue  # constructor / destructor
+            linked.add(h)
+            f.wired.append((h, line))
+            r.add_edge(src, h, "callback", f.file, line, "heuristic", "passed as value")
+            r.wiring_links += 1
+        _link_case_callbacks(r, f, src, linked_from)
+
+
+def _link_case_callbacks(r, f, src, linked_from):
+    """A dialog / thread / timer started inside `case ID:` belongs to that id: id --case_calls--> procedure."""
+    for (label, line, end_line, parent) in f.cases:
+        if not _label_ok(r, label):
+            continue
+        for (h, hl) in f.wired:
+            if line <= hl <= end_line:
+                r.add_edge(r.id_node(label), h, "case_calls", f.file, hl, "heuristic",
+                           "%s case@%d" % (r.g.nodes[src].name, line))
 
 
 def make_dispatch(r):

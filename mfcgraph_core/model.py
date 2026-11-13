@@ -33,6 +33,9 @@ class RawFunc:
         self.strings = []  # (line, text) string literals in the body (see extract_cpp.scan_strings)
         self.cases = []    # (label, line, end_line, parent_label) switch cases (win32.scan_switches)
         self.crackers = [] # (msg, handler, line) HANDLE_MSG
+        self.dialog_procs = []  # (IDD, proc name, line) DialogBox*/CreateDialog*
+        self.wired = []    # (node, line) resolved dialog procs / callbacks (filled by win32.make_wiring)
+        self.fnrefs = []   # (name, line) identifiers used as values: possible function pointers (win32.scan_wiring)
         self.refs = []     # (name, recv, line, mode) member/global variable refs, mode 'r'|'w' (scan_refs)
 
 

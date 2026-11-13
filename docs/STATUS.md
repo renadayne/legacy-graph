@@ -138,3 +138,10 @@
 - explore: seeds get the case line as focus; Flow/Blast UI entries limited to the ids the query reached (SeedResult.ids).
 - Ranking: ids handled by > 2 functions (IDOK…) scaled down (GENERIC_ID_FANOUT); leftover budget goes to files between 5% and 15%.
 - diagnose "win32: procedures N, dispatch entries M". Win32App recall 0.808 → 0.885; BigApp 1.000. Tests: `tests/test_win32.py` (16).
+
+## S19 — Win32 wiring
+- `win32.scan_wiring` / `make_wiring`: DialogBox*/CreateDialog*(IDD, Proc) → Proc --uses_dialog--> dialog + caller --callback--> Proc;
+  identifiers used as values that resolve to functions (lpfnWndProc, SetTimer, CreateThread, SetWindowLongPtr…) → callback edge
+  (class names, ctors, already-linked calls skipped); callbacks inside `case ID:` → id --case_calls--> proc.
+- explore: entry path prefers the queried ids; shared IDOK shown only for this proc's dialogs; calls ≤3 lines before a matched
+  message literal seeded (W_NEAR_CALL 0.6). Win32App 0.885, BigApp 1.000. 20k files: index 15.3 s, 470 MB. Tests: test_win32 (27).

@@ -77,7 +77,7 @@ def explore(g, query, budget=None, scope=None):
     scope_dirs = [scope] if isinstance(scope, str) else list(scope or [])
     terms = parse_query(query)
     sr = seed(g, terms, scope_dirs, query)
-    scores, spine = rank(g, sr.seeds, sr.scope_dirs)
+    scores, spine = rank(g, sr.seeds, sr.scope_dirs, sr.ids)
     dym = R.did_you_mean_section(sr)
     if not scores:
         msg = ("No code matched '%s'. Name a function, class, ID, file or quote the exact message text.\n"
