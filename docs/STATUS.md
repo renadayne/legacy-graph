@@ -131,3 +131,10 @@
   unknown → first branch kept, counted "guessed"); builtins _WIN32 WIN32 _MSC_VER, __cplusplus for non-.c. In-file #define/#undef tracked.
 - `lexer.filter_conditionals(tokens, macros=None, stats=None)` (None = v0.2 behaviour). `build_index(..., pp=PPConfig)`; CLI index options.
 - Index v3: `D` records keep the config; diagnose "#if conditions: evaluated N, guessed M". Tests: `tests/test_pp.py` (27).
+
+## S18 — Win32 dispatch
+- New `mfcgraph_core/win32.py`: `scan_switches` (RawFunc.cases [(label, line, end, parent)], crackers from HANDLE_MSG) and
+  `make_dispatch`: id --handled_by--> proc ("case@line"), id --case_calls--> callees inside the case, HANDLE_MSG edges, flag win32-proc.
+- explore: seeds get the case line as focus; Flow/Blast UI entries limited to the ids the query reached (SeedResult.ids).
+- Ranking: ids handled by > 2 functions (IDOK…) scaled down (GENERIC_ID_FANOUT); leftover budget goes to files between 5% and 15%.
+- diagnose "win32: procedures N, dispatch entries M". Win32App recall 0.808 → 0.885; BigApp 1.000. Tests: `tests/test_win32.py` (16).

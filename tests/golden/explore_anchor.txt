@@ -1,4 +1,4 @@
-mfc_explore: 3 functions in 3 files (budget 3000, used 1634). Scope: (all)
+mfc_explore: 3 functions in 3 files (budget 3000, used 1644). Scope: (all)
 
 ## Flow
 Toolbar IDR_MAINFRAME button 3
@@ -57,4 +57,4 @@ Toolbar IDR_MAINFRAME button 3
 65	}
 
 ## Blast radius
-CMainFrame::OnFileExport ← 0 callers, called by MFC via ID_FILE_EXPORT [ON_COMMAND]; UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E
+CMainFrame::OnFileExport ← 0 callers, called by the framework via ID_FILE_EXPORT [ON_COMMAND]; UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E

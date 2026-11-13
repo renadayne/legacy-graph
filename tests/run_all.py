@@ -8,7 +8,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SUITES = ["test_mfcgraph.py", "golden_test.py", "test_extract.py", "test_index.py", "test_explore_query.py",
-          "test_explore_seed.py", "test_explore_windows.py", "test_explore.py", "test_pp.py",
+          "test_explore_seed.py", "test_explore_windows.py", "test_explore.py", "test_pp.py", "test_win32.py",
           "eval_explore.py"]
 
 

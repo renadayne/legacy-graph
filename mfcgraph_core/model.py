@@ -31,6 +31,8 @@ class RawFunc:
         self.ddx = []      # (macro, id, member, line)
         self.locals = {}   # variable -> type
         self.strings = []  # (line, text) string literals in the body (see extract_cpp.scan_strings)
+        self.cases = []    # (label, line, end_line, parent_label) switch cases (win32.scan_switches)
+        self.crackers = [] # (msg, handler, line) HANDLE_MSG
         self.refs = []     # (name, recv, line, mode) member/global variable refs, mode 'r'|'w' (scan_refs)
 
 
