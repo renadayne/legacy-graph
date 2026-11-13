@@ -8,7 +8,7 @@ classes: 6
 functions: defined 45, declared-only 0, framework entry points 11, message handlers 9
 call sites: 93  exact 23.7%, likely 1.1%, ambiguous 1.1%, external 74.2%
 message-map entries: 13  handler found in code 76.9%, handled by an MFC base class 23.1%, NOT FOUND 0.0%
-win32: window/dialog procedures 1, switch-case / HANDLE_MSG dispatch entries linked 3
+win32: window/dialog procedures 1, switch-case / HANDLE_MSG dispatch entries linked 3, dialog/callback wiring links 0
 unrecognised ON_ macros: 0 uses of 0 kinds  (add --show-names to list them)
 resources: dialogs 2, menu items 10, accelerators 4, toolbar buttons 4, strings 4
 #include resolved inside the tree: 87.5% of 32 (system/MFC headers are expected to be unresolved)

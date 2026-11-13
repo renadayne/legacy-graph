@@ -88,11 +88,37 @@ def test_explore(g):
     check(case_line, "S18: source shows the case line", out[:1500])
 
 
+def test_wiring(g):
+    cb = {(a, d) for a, d in [(g.nodes[e.src].name, g.nodes[e.dst].name) for e in g.edges if e.kind == "callback"]}
+    for pair in [("RegisterMainClass", "MainWndProc"), ("MainWndProc", "BlinkTimerProc"),
+                 ("StartBackgroundSave", "SaveThreadProc"), ("InstallDigitFilter", "EditSubclassProc"),
+                 ("MainWndProc", "ExportDlgProc")]:
+        check(pair in cb, "S19: callback %s -> %s" % pair, sorted(cb))
+    ud = {(g.nodes[e.src].name, g.nodes[e.dst].name) for e in g.edges if e.kind == "uses_dialog"}
+    check(("ExportDlgProc", "IDD_EXPORT") in ud and ("OptionsDlgProc", "IDD_OPTIONS") in ud, "S19: proc uses dialog", ud)
+    cc = [d for d, _, _ in edges(g, "IDM_FILE_EXPORT", "case_calls")]
+    check("ExportDlgProc" in cc, "S19: dialog started in case IDM_FILE_EXPORT", cc)
+    b = build_index(os.path.join(ROOT, "samples", "BigApp"))
+    bcb = sorted((b.nodes[e.src].qname, b.nodes[e.dst].qname) for e in b.edges if e.kind == "callback")
+    check(bcb == [("CPaymentWorker::Start", "PaymentThreadProc")], "S19: no false callbacks (RUNTIME_CLASS, ctors)", bcb)
+
+
+def test_explore_wiring(g):
+    flow = explore(g, "IDM_FILE_EXPORT").split("## Source")[0]
+    check("エクスポート(E)" in flow and "保存" not in flow and "-> ExportDlgProc" in flow, "S19: flow menu -> dialog proc", flow)
+    out = explore(g, '"エクスポートに失敗しました"')
+    check("### Export.c" in out, "S19: function called just before the message gets code", out[:2000])
+    blast = out.split("## Blast radius")[1].split("##")[0]
+    check("IDD_OPTIONS" not in blast and "IDD_ABOUT" not in blast, "S19: shared IDOK limited to this dialog", blast)
+
+
 def main():
     test_extract_cases()
     g = build_index(SAMPLES, 932)
     test_graph(g)
     test_explore(g)
+    test_wiring(g)
+    test_explore_wiring(g)
     print("win32: %d passed, %d failed" % (passed, failed))
     return 1 if failed else 0
 
