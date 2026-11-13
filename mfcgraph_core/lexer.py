@@ -115,12 +115,37 @@ def _is_false_cond(rest):
     return r in ("0", "(0)", "FALSE")
 
 
-def filter_conditionals(tokens):
-    """Keep the first active branch of each #if/#ifdef/#elif/#else chain
-    ("#if 0" is false). Returns (tokens, dropped_count)."""
+def filter_conditionals(tokens, macros=None, stats=None):
+    """Keep the active branch of each #if/#ifdef/#elif/#else chain. Returns (tokens, dropped_count).
+
+    macros=None: first branch wins ("#if 0" is false) — the v0.2 behaviour.
+    macros=pp_eval.FileMacros: conditions are evaluated; #define/#undef in active code update the table; a condition
+    that cannot be decided falls back to "first branch wins". stats (dict) gets "evaluated" / "guessed" counts.
+    """
     st = []  # [parent_active, active, taken]
     out = []
     dropped = 0
+
+    def decide(word, rest):
+        if macros is None:
+            false = word == "if" and _is_false_cond(rest)
+            if stats is not None:
+                key = "evaluated" if false else "guessed"
+                stats[key] = stats.get(key, 0) + 1
+            return not false
+        name = rest.strip().split("(")[0].split()[0] if rest.strip() else ""
+        if word == "ifdef":
+            r = macros.ifdef(name)
+        elif word == "ifndef":
+            r = macros.ifdef(name)
+            r = None if r is None else not r
+        else:
+            r = macros.eval_if(rest)
+        if stats is not None:
+            key = "guessed" if r is None else "evaluated"
+            stats[key] = stats.get(key, 0) + 1
+        return True if r is None else r
+
     for t in tokens:
         if t[0] == PP:
             d = t[1]
@@ -130,7 +155,7 @@ def filter_conditionals(tokens):
             word, rest = d[:sp], d[sp:]
             if word in ("if", "ifdef", "ifndef"):
                 parent = (not st) or st[-1][1]
-                cond = not (word == "if" and _is_false_cond(rest))
+                cond = decide(word, rest) if parent else False
                 st.append([parent, parent and cond, cond])
                 continue
             if word == "elif" and st:
@@ -138,7 +163,7 @@ def filter_conditionals(tokens):
                 if f[2]:
                     f[1] = False
                 else:
-                    cond = not _is_false_cond(rest)
+                    cond = decide("if", rest) if f[0] else False
                     f[1] = f[0] and cond
                     f[2] = cond
                 continue
@@ -151,6 +176,14 @@ def filter_conditionals(tokens):
                 if st:
                     st.pop()
                 continue
+            if macros is not None and ((not st) or st[-1][1]) and word in ("define", "undef"):
+                parts = rest.split(None, 1)
+                if parts:
+                    name = parts[0].split("(")[0]
+                    if word == "undef":
+                        macros.undef(name)
+                    elif "(" not in parts[0]:
+                        macros.define(name, parts[1] if len(parts) > 1 else "1")
         if (not st) or st[-1][1]:
             out.append(t)
         else:

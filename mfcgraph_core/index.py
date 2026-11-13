@@ -5,6 +5,8 @@ v1 is the format of the frozen C++ edition; v2 (Python, v0.2) adds:
   F record: two trailing columns mtime (int seconds) and size (bytes) of the source file at index time.
   T<TAB>func_node<TAB>line<TAB>text   string literal found in the body of function node func_node.
   R<TAB>func_node<TAB>line<TAB>target<TAB>mode   variable reference; target "Class::field" or "g_x"; mode r|w.
+v3 adds D records for the preprocessor configuration used by index (--define / --undef / --undef-unknown):
+  D<TAB>define<TAB>NAME<TAB>value · D<TAB>undef<TAB>NAME · D<TAB>undef-unknown<TAB>1
 load_graph reads v1 and v2 (v1: texts empty, mtime 0, size -1).
 """
 import hashlib
@@ -28,15 +30,16 @@ DEFAULT_SKIP = frozenset([".git", ".svn", ".hg", ".vs", ".vscode", ".mfcgraph", 
 
 
 # Index format: v1 = MFCGRAPH/F/N/E/S. v2 adds F columns mtime,size and T records (func, line, text).
-INDEX_VERSION = 2
-SUPPORTED_VERSIONS = ("1", "2")
+INDEX_VERSION = 3
+SUPPORTED_VERSIONS = ("1", "2", "3")
 
 
 def index_path_for_root(root):
     return os.path.join(root, ".mfcgraph", "index.mfg")
 
 
-def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbose=False):
+def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbose=False, pp=None):
+    """pp: optional pp_eval.PPConfig (--define/--undef/--undef-unknown); None keeps "first #if branch wins"."""
     if not os.path.isdir(root):
         raise ValueError("not a directory: " + root)
     root = os.path.abspath(root)
@@ -59,6 +62,8 @@ def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbos
     paths.sort(key=lambda p: os.path.relpath(p, root).replace(os.sep, "/"))
 
     raw = RawData()
+    use_pp = pp is not None and pp.active()
+    pp_stats = {}
     for done, p in enumerate(paths, 1):
         try:
             with open(p, "rb") as fh:
@@ -75,7 +80,8 @@ def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbos
         raw.files.append(SrcFile(rel, enc, hashlib.blake2b(data, digest_size=8).hexdigest(), text.count("\n") + 1,
                                  mtime=mtime, size=len(data)))
         is_rc = os.path.splitext(p)[1].lower() in RC_EXTS
-        active, dropped = filter_conditionals(lex(text, is_rc))
+        macros = pp.for_file(cmode.is_c_file(rel)) if use_pp else None
+        active, dropped = filter_conditionals(lex(text, is_rc), macros, pp_stats)
         raw.files[fi].skipped_tokens = dropped
         if is_rc:
             extract_rc(active, fi, raw)
@@ -93,7 +99,13 @@ def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbos
     g.root = root
     g.codepage = codepage
     g.created = time.strftime("%Y-%m-%d %H:%M:%S")
+    if use_pp:
+        g.pp_defines = sorted(pp.defines.items())
+        g.pp_undefs = sorted(pp.undefs)
+        g.pp_undef_unknown = pp.undef_unknown
     resolve(raw, g)
+    g.stats["pp.evaluated"] = str(pp_stats.get("evaluated", 0))
+    g.stats["pp.guessed"] = str(pp_stats.get("guessed", 0))
     return g
 
 
@@ -137,6 +149,12 @@ def save_graph(g, path):
         lines.append("T\t%d\t%d\t%s" % (fn, line, _esc(text)))
     for (fn, line, target, mode) in g.refs:
         lines.append("R\t%d\t%d\t%s\t%s" % (fn, line, _esc(target), mode))
+    for name, val in g.pp_defines:
+        lines.append("D\tdefine\t%s\t%s" % (_esc(name), _esc(val)))
+    for name in g.pp_undefs:
+        lines.append("D\tundef\t%s" % _esc(name))
+    if g.pp_undef_unknown:
+        lines.append("D\tundef-unknown\t1")
     for k in sorted(g.stats):
         lines.append("S\t%s\t%s" % (_esc(k), _esc(g.stats[k])))
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
@@ -173,6 +191,13 @@ def load_graph(path):
             g.files.append(sf)
         elif tag == "T" and len(f) >= 4:
             g.texts.append((int(f[1]), int(f[2]), f[3]))
+        elif tag == "D" and len(f) >= 3:
+            if f[1] == "define" and len(f) >= 4:
+                g.pp_defines.append((f[2], f[3]))
+            elif f[1] == "undef":
+                g.pp_undefs.append(f[2])
+            elif f[1] == "undef-unknown":
+                g.pp_undef_unknown = True
         elif tag == "R" and len(f) >= 5:
             g.refs.append((int(f[1]), int(f[2]), f[3], f[4]))
         elif tag == "S" and len(f) >= 3:
