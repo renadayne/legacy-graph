@@ -14,6 +14,7 @@ import time
 
 from .encoding import decode_bytes
 from .extract_cpp import extract_cpp
+from . import cmode
 from .extract_rc import extract_rc
 from .lexer import lex, filter_conditionals
 from .model import RawData, SrcFile, Graph, Node, Edge
@@ -78,6 +79,11 @@ def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbos
         raw.files[fi].skipped_tokens = dropped
         if is_rc:
             extract_rc(active, fi, raw)
+        elif cmode.is_c_file(rel):
+            active, _ = cmode.protect(active)
+            before = cmode.snapshot(raw)
+            extract_cpp(active, fi, raw)
+            cmode.restore(raw, before)
         else:
             extract_cpp(active, fi, raw)
         if verbose and done % 500 == 0:

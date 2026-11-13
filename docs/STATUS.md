@@ -114,3 +114,8 @@
 ## v0.3 plan
 - `docs/PLAN-v0.3.md`: mixed MFC + Win32 + C (user's diagnose: Win32 switch dispatch, CALLBACK=300, #else=329, Shift-JIS).
 - Steps S15 (Win32App sample) … S21. Open questions in §4 (which #ifdef macros; HANDLE_MSG usage). Next: S15.
+
+## S16 — C mode for .c files
+- New `mfcgraph_core/cmode.py`: in `.c` files, C++-only keywords (`new class this delete template operator …`) are marked before
+  extraction and unmarked after (`protect`, `snapshot`, `restore`), so C names like `void delete(...)`, `struct x *new` parse.
+- `index.build_index` applies it to `.c` only (headers stay C++). Tests in `tests/test_extract.py`. (Committed before S15: sample still in progress.)
