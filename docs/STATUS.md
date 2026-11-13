@@ -81,3 +81,10 @@
 - MCP: default tool list = `mfc_explore` only; `MFCGRAPH_MCP_TOOLS=explore,refs,trace,...|all` enables more (disabled calls refused).
   New tools mfc_explore, mfc_refs; INSTRUCTIONS rewritten (explore first, treat source as read, MFC-called flags).
 - `mcp.enabled_tools(env)`, `mcp.tool_list(env)`, `run_mcp_server(path, stdin=None, stdout=None)` (testable in-process).
+
+## S9 — evaluation + tuning
+- `tests/eval_explore.py` (in run_all): recall = must_include functions with body lines in Source; fails if mean < 0.9 or over budget.
+- Result on BigApp @8000: recall 1.000 (start 0.940), 14/14 within budget; @6000 1.000, @4000 0.905, @3000 0.833.
+- Tuning (each a general rule): low-score functions get full code when it fits the remaining share (unused budget = waste);
+  words also match segments of handled id names (IDC_LIST_LINES); Vietnamese symptom phrases ("thông báo", "bấm nút"…) dropped.
+- Tried capping code files to src/(2·600): worse at 3000 → reverted.

@@ -33,8 +33,8 @@ CASES = [
     ("ID_FILE_EXPORT", [T("id", "ID_FILE_EXPORT")]),
     ("IDD_EXPORT dialog, WM_APP_RECALC_DONE", [T("id", "IDD_EXPORT"), T("word", "dialog"),
                                                T("id", "WM_APP_RECALC_DONE")]),
-    ('thông báo "Không thể lưu hóa đơn"', [T("word", "thông"), T("word", "báo"),
-                                          T("quoted", "Không thể lưu hóa đơn")]),
+    ('thông báo "Không thể lưu hóa đơn"', [T("quoted", "Không thể lưu hóa đơn")]),  # symptom phrase dropped
+    ("báo cáo tháng bị lỗi", [T("word", "báo"), T("word", "cáo"), T("word", "tháng")]),
     ("message 'Export failed' shown", [T("word", "message"), T("quoted", "Export failed"), T("word", "shown")]),
     ("it doesn't save", [T("word", "doesn"), T("word", "save")]),
     ("m_nZoom wrong after zoom", [T("ident", "m_nZoom"), T("word", "zoom")]),

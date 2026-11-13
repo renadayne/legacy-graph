@@ -1,4 +1,4 @@
-mfc_explore: 10 functions in 3 files (budget 8000, used 3899). Scope: (all)
+mfc_explore: 10 functions in 3 files (budget 8000, used 4182). Scope: (all)
 
 ## Flow
 Toolbar IDR_MAINFRAME button 3 / Menu IDR_MAINFRAME: File > Export... / Accelerator Ctrl+E
@@ -70,7 +70,7 @@ Toolbar IDR_MAINFRAME button 3 / Menu IDR_MAINFRAME: File > Export... / Accelera
 80		text += _T("</values>");
 81		return util::WriteTextFile(strPath, text);
 82	}
-### Util.cpp — util::LogMessage, util::WriteTextFile; util::FileExists, util::IsValidPath, util::FormatNumber (signature only)
+### Util.cpp — util::LogMessage, util::FileExists, util::IsValidPath, util::WriteTextFile, util::FormatNumber
 8	void LogMessage(const CString& msg)
 9	{
 10		CStdioFile f;
@@ -83,9 +83,20 @@ Toolbar IDR_MAINFRAME button 3 / Menu IDR_MAINFRAME: File > Export... / Accelera
 17	}
 … line 18 elided — mfc_explore "Util.cpp:18" returns it
 19	BOOL FileExists(const CString& path)
-… lines 20-23 elided — mfc_explore "Util.cpp:20-23" returns them
+20	{
+21		return ::GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES;
+22	}
+… line 23 elided — mfc_explore "Util.cpp:23" returns it
 24	BOOL IsValidPath(const CString& path)
-… lines 25-34 elided — mfc_explore "Util.cpp:25-34" returns them
+25	{
+26		if (path.GetLength() > MAX_PATH)
+27		{
+28			LogMessage(_T("Path too long"));
+29			return FALSE;
+30		}
+31		return path.FindOneOf(_T("*?\"<>|")) < 0;
+32	}
+… lines 33-34 elided — mfc_explore "Util.cpp:33-34" returns them
 35	BOOL WriteTextFile(const CString& path, const CString& text)
 36	{
 37		CStdioFile f;
@@ -98,6 +109,11 @@ Toolbar IDR_MAINFRAME button 3 / Menu IDR_MAINFRAME: File > Export... / Accelera
 44	}
 … lines 45-56 elided — mfc_explore "Util.cpp:45-56" returns them
 57	CString FormatNumber(double value)
+58	{
+59		CString s;
+60		s.Format(_T("%.2f"), value);
+61		return s;
+62	}
 
 ## Blast radius
 CMainFrame::OnFileExport ← 0 callers, called by MFC via ID_FILE_EXPORT [ON_COMMAND]; UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E
