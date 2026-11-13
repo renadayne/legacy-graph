@@ -1,4 +1,4 @@
-mfc_explore: 10 functions in 3 files (budget 8000, used 4182). Scope: (all)
+mfc_explore: 11 functions in 4 files (budget 8000, used 4252). Scope: (all)
 
 ## Flow
 Toolbar IDR_MAINFRAME button 3 / Menu IDR_MAINFRAME: File > Export... / Accelerator Ctrl+E
@@ -114,11 +114,13 @@ Toolbar IDR_MAINFRAME button 3 / Menu IDR_MAINFRAME: File > Export... / Accelera
 60		s.Format(_T("%.2f"), value);
 61		return s;
 62	}
+### LegacyDoc.h — CLegacyDoc::HasData
+19		BOOL HasData() const { return m_values.GetSize() > 0; }
 
 ## Blast radius
-CMainFrame::OnFileExport ← 0 callers, called by MFC via ID_FILE_EXPORT [ON_COMMAND]; UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E
+CMainFrame::OnFileExport ← 0 callers, called by the framework via ID_FILE_EXPORT [ON_COMMAND]; UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E
 util::WriteTextFile ← 2 callers (CLegacyDoc::ExportCsv, CLegacyDoc::ExportXml)
 CLegacyDoc::ExportTo ← 1 caller (CMainFrame::OnFileExport); UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E
 
 ## Not shown (ask mfc_explore with these names)
-CLegacyDoc::HasData  LegacyDoc.h:19 · CLegacyApp::InitInstance  LegacyApp.cpp:31
+CLegacyApp::InitInstance  LegacyApp.cpp:31

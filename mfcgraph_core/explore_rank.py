@@ -15,6 +15,8 @@ Design (why):
     External nodes (MFC/Win32, unresolved) are never entered: they have no code to show and would act as hubs.
   * Edge weight by resolution confidence: exact 1, likely 0.7, heuristic 0.5, ambiguous 0.3/n (n candidates of
     that call site) — uncertain edges should carry proportionally less relevance.
+  * An id handled by more than GENERIC_ID_FANOUT functions (IDOK, IDCANCEL, WM_DESTROY) links unrelated window
+    procedures; its handled_by / case_calls edges are scaled by GENERIC_ID_FANOUT / fanout, like ambiguous calls.
   * Personalised PageRank (random walk with restart RESTART=0.3, ITERATIONS=20) from the seed weights: a node
     scores high when many strong short paths connect it to seeds, which is what "related code" means.
     Mass of nodes with no admissible neighbour returns to the restart vector.
@@ -35,11 +37,13 @@ TOP_SEEDS = 4
 MAX_PATH = 6
 MEMBER_W = 0.3
 MAX_SEEDS = 120
+GENERIC_ID_FANOUT = 2   # an id handled by more functions than this is generic: its edges are scaled down
 
 CONF_W = {"exact": 1.0, "likely": 0.7, "heuristic": 0.5, "ambiguous": 0.3, "": 1.0}
-WALK_KINDS = frozenset(["calls", "handled_by", "triggers", "sends", "overrides", "binds", "uses_dialog", "contains"])
+WALK_KINDS = frozenset(["calls", "handled_by", "triggers", "sends", "overrides", "binds", "uses_dialog", "contains",
+                        "case_calls"])
 # forward (call-direction) kinds for the spine: src -> dst
-FORWARD_KINDS = frozenset(["calls", "handled_by", "triggers", "sends"])
+FORWARD_KINDS = frozenset(["calls", "handled_by", "triggers", "sends", "case_calls"])
 
 
 def _weight(seeds, n):
@@ -67,6 +71,10 @@ def _edge_weights(g):
         if adj[b].get(a, 0) < w:
             adj[b][a] = w
 
+    fanout = {}  # id node -> number of functions handling it (IDOK/IDCANCEL are handled everywhere)
+    for e in g.edges:
+        if e.kind == "handled_by" and nodes[e.dst].kind == "function":
+            fanout[e.src] = fanout.get(e.src, 0) + 1
     for e in g.edges:
         if e.kind not in WALK_KINDS or e.conf == "external":
             continue
@@ -75,6 +83,8 @@ def _edge_weights(g):
         w = CONF_W.get(e.conf, 0.5)
         if e.conf == "ambiguous":
             w /= max(1, amb.get((e.src, e.file, e.line), 1))
+        if e.kind in ("handled_by", "case_calls") and fanout.get(e.src, 0) > GENERIC_ID_FANOUT:
+            w *= GENERIC_ID_FANOUT / float(fanout[e.src])
         link(e.src, e.dst, w)
     for n in nodes:
         if n.kind == "function" and n.owner >= 0:

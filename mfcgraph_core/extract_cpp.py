@@ -8,6 +8,7 @@ RUNTIME_CLASS, IDD, IMPLEMENT_*) are recognised explicitly.
 import re
 
 from .lexer import IDENT, NUMBER, STRING, CHAR, PUNCT, PP
+from .win32 import scan_switches
 from .model import RawCall, RawFunc, RawClass, RawMsgEntry, RawMsgMap
 
 KEYWORDS = frozenset("""
@@ -787,6 +788,7 @@ class CppWalker:
         self.scan_locals(f, b, e)
         self.scan_strings(f, b, e)
         self.scan_refs(f, b, e)
+        scan_switches(self, f, b, e)
         t, pm = self.t, self.pm
         is_p, is_id = self.is_p, self.is_id
         for x in range(b, e):

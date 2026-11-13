@@ -616,6 +616,8 @@ def q_diagnose(g, show_names=False):
         "message-map entries: %s  handler found in code %s, handled by an MFC base class %s, NOT FOUND %s" % (
             s("msgmap.entries"), _pct(s("msgmap.resolved"), s("msgmap.entries")),
             _pct(s("msgmap.framework"), s("msgmap.entries")), _pct(s("msgmap.unresolved"), s("msgmap.entries"))),
+        "win32: window/dialog procedures %s, switch-case / HANDLE_MSG dispatch entries linked %s" % (
+            s("win32.procs"), s("win32.dispatch")),
         "unrecognised ON_ macros: %s uses of %s kinds%s" % (
             s("msgmap.unknown_macros"), s("msgmap.unknown_macro_kinds"),
             ("  [%s]" % g.stats.get("msgmap.unknown_macro_names", "")) if show_names

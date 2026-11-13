@@ -15,6 +15,8 @@ Allocation (why):
   * Files are weighted by the summed score of their chosen functions; a file under MIN_FILE_FRAC (15%) of the top
     file gets no code, only names (a fragment is worse than a pointer). Pinned files and files with an exact
     function always get code.
+  * Leftover budget after that goes to files under the cut but above LATE_FILE_FRAC (5%) of the top file, best first
+    (full code or windows, no signatures); weaker files stay names-only so the answer is not padded.
   * Each code file gets a share of the source budget proportional to weight, at least MIN_FILE_CHARS (600),
     at most MAX_FILE_FRAC (70%) unless pinned; unused share flows to the next file.
   * Inside a file: exact functions first and in full (windows only if one alone exceeds the share), then by score:
@@ -27,6 +29,7 @@ import os
 from .explore_windows import windows_for, render, signature_only
 
 MIN_FILE_FRAC = 0.15
+LATE_FILE_FRAC = 0.05     # files under MIN_FILE_FRAC but above this may use leftover budget
 MIN_FILE_CHARS = 600
 MAX_FILE_FRAC = 0.70
 LOW_FRAC = 0.12           # below this fraction of the top score (and not seed/spine): signature only
@@ -49,7 +52,8 @@ def default_budget(g):
 
 
 def flags_of(n):
-    return [f for f in n.flags.split(",") if f in ("msg-handler", "update-ui-handler", "framework-entry", "virtual")]
+    return [f for f in n.flags.split(",") if f in ("msg-handler", "update-ui-handler", "framework-entry", "win32-proc",
+                                               "virtual")]
 
 
 def loc(g, n):
@@ -229,6 +233,24 @@ def allocate(g, chosen, sr, spine, src_budget, top_score, skip_files=()):
         if fp.funcs or fp.extra_windows:
             plans.append(fp)
         carry = max(0, avail - used)
+    # Files under the weight cut still get code when the budget has room for a useful slice: unused budget is waste.
+    late = [fi for fi in order if fi not in keep and by_file[fi] and weight[fi] >= LATE_FILE_FRAC * top_w]
+    for fi in late:
+        if carry < MIN_FILE_CHARS:
+            break
+        lines = _lines(g, fi)
+        fp = FilePlan(fi, weight[fi], False)
+        used = len(g.files[fi].path) + 60
+        for n, s in sorted(by_file[fi], key=lambda x: (-x[1], x[0])):
+            plan, c = plan_function(g, lines, fi, n, s, carry - used, False, False, sr, chosen_set)
+            if plan is None or plan.mode == SIG:
+                continue
+            fp.funcs.append(plan)
+            used += c
+            not_shown = [x for x in not_shown if x != n]
+        if fp.funcs:
+            plans.append(fp)
+            carry -= used
     return plans, not_shown
 
 
@@ -274,13 +296,18 @@ def node_text(g, n):
     return node.name
 
 
-def ui_entries(g, fn):
-    """['Menu ...', 'Accelerator ...'] reaching function fn through handled_by + triggers/contains."""
+def ui_entries(g, fn, only_ids=None):
+    """['Menu ...', 'Accelerator ...'] reaching function fn through handled_by + triggers/contains.
+    only_ids: restrict to these id nodes when at least one of them reaches fn (a window procedure handles many ids;
+    show the UI of the ids the query is about)."""
+    ins = [g.edges[ei] for ei in g.inn[fn] if g.edges[ei].kind in ("handled_by", "case_calls")]
+    if only_ids:
+        sel = [e for e in ins if e.src in only_ids]
+        ins = sel or [e for e in ins if e.kind == "handled_by"]
+    else:
+        ins = [e for e in ins if e.kind == "handled_by"]
     out = []
-    for ei in g.inn[fn]:
-        e = g.edges[ei]
-        if e.kind != "handled_by":
-            continue
+    for e in ins:
         for ej in g.inn[e.src]:
             t = g.edges[ej]
             if t.kind == "triggers":
@@ -323,7 +350,7 @@ def flow_section(g, spine, sr, top_func=None):
     for p in spine[:3]:
         head = g.nodes[p[0]]
         if head.kind == "function":
-            ui = ui_entries(g, p[0])
+            ui = ui_entries(g, p[0], sr.ids)
             if ui:
                 pl = path_lines(g, p)
                 lines.append(" / ".join(ui[:3]))
@@ -332,7 +359,7 @@ def flow_section(g, spine, sr, top_func=None):
                 continue
         lines.extend(path_lines(g, p))
     if not spine and top_func is not None:
-        ui = ui_entries(g, top_func)
+        ui = ui_entries(g, top_func, sr.ids)
         if ui:
             lines.append(" / ".join(ui[:3]))
             lines.append("  -> " + node_text(g, top_func))
@@ -349,7 +376,7 @@ def flow_section(g, spine, sr, top_func=None):
     return "## Flow\n" + "\n".join(_cap(lines)) + "\n"
 
 
-def blast_section(g, nodes):
+def blast_section(g, nodes, only_ids=None):
     lines = []
     for n in nodes[:3]:
         callers = sorted({g.edges[ei].src for ei in g.inn[n] if g.edges[ei].kind == "calls"
@@ -358,12 +385,12 @@ def blast_section(g, nodes):
                for ei in g.inn[n] if g.edges[ei].kind == "handled_by"]
         s = "%s ← %d caller%s" % (g.nodes[n].qname, len(callers), "" if len(callers) == 1 else "s")
         if via:
-            s += ", called by MFC via " + ", ".join(via[:3])
+            s += ", called by the framework via " + ", ".join(via[:3])
         if callers:
             s += " (" + ", ".join(g.nodes[c].qname for c in callers[:4]) + (", …" if len(callers) > 4 else "") + ")"
-        ui = ui_entries(g, n)
+        ui = ui_entries(g, n, only_ids)
         for c in callers[:6]:
-            ui.extend(x for x in ui_entries(g, c) if x not in ui)
+            ui.extend(x for x in ui_entries(g, c, only_ids) if x not in ui)
         if ui:
             s += "; UI entries: " + ", ".join(ui[:4]) + (", …" if len(ui) > 4 else "")
         lines.append(s)

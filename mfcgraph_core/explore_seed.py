@@ -12,6 +12,7 @@ Interface:
       unmatched    list[Term]                    non-word terms that matched nothing
       suggestions  {term_value: [names]}         "did you mean" for unmatched ident / qualified terms
       texts        [(func, line, text)]          literals matched by quoted terms (for the Flow section)
+      ids          set(node_id)                  id/dialog nodes the query reached (Flow shows only their UI entries)
 
 Weights (tuned in S9; every number is a general principle, not a fit to one sample):
     anchor 10 (exact) · qualified 8 (exact) · ident 6 (<= 5 definitions; more -> 30 split evenly)
@@ -28,7 +29,8 @@ import re
 import unicodedata
 from collections import namedtuple
 
-SeedResult = namedtuple("SeedResult", "seeds exact pinned_files scope_dirs focus file_focus unmatched suggestions texts")
+SeedResult = namedtuple("SeedResult",
+                        "seeds exact pinned_files scope_dirs focus file_focus unmatched suggestions texts ids")
 
 W_ANCHOR = 10.0
 W_QUALIFIED = 8.0
@@ -41,6 +43,7 @@ WORD_CAP = 3.0
 WORD_MAX_HITS = 40    # a word matching more nodes than this has its weight spread over them
 W_REF_WRITE = 5.0     # function writing a named field
 W_REF_READ = 2.0      # function reading a named field
+W_CASE_CALL = 0.6     # function called inside `case ID:` of a window procedure (fraction of the id weight)
 MIN_CAPTION = 4       # shortest caption matched inside free query text
 
 _SEG = re.compile(r"[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|\d+")
@@ -84,6 +87,7 @@ class _Seeder:
         self.unmatched = []
         self.suggestions = {}
         self.texts = []
+        self.ids_hit = set()
         self.word_score = {}
         self.qtext = norm(query_text or "")
         self._index()
@@ -245,11 +249,20 @@ class _Seeder:
 
     def seed_id(self, idn, w, reason):
         g = self.g
+        self.ids_hit.add(idn)
         name = g.nodes[idn].name
         any_hit = False
-        for fn in self.handlers_of_id(idn):
-            self.add(fn, w, "handles " + reason)
-            any_hit = True
+        for ei in g.out[idn]:
+            e = g.edges[ei]
+            if g.nodes[e.dst].kind != "function":
+                continue
+            if e.kind == "handled_by":
+                # switch-based dispatch: the case line is where the id is handled
+                self.add(e.dst, w, "handles " + reason, e.line if e.extra.startswith("case@") else None)
+                any_hit = True
+            elif e.kind == "case_calls":
+                self.add(e.dst, w * W_CASE_CALL, "called in case " + reason, e.line)
+                any_hit = True
         for ei in g.inn[idn]:
             e = g.edges[ei]
             src = g.nodes[e.src]
@@ -421,7 +434,7 @@ class _Seeder:
                     self.suggest(t)
         self.captions_in_text()
         return SeedResult(self.seeds, self.exact, self.pinned, self.scope, self.focus, self.file_focus,
-                          self.unmatched, self.suggestions, self.texts)
+                          self.unmatched, self.suggestions, self.texts, self.ids_hit)
 
 
 def seed(graph, terms, scope_dirs=(), query_text=""):

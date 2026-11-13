@@ -89,7 +89,7 @@ def explore(g, query, budget=None, scope=None):
     top_func = chosen[0][0] if chosen else None
     flow = R.flow_section(g, spine, sr, top_func)
     blast_nodes = [n for n, _ in chosen if n in sr.exact or n in sr.seeds][:3] or [n for n, _ in chosen[:1]]
-    blast = R.blast_section(g, blast_nodes)
+    blast = R.blast_section(g, blast_nodes, sr.ids)
     files = {g.nodes[n].file for n, _ in chosen} | set(sr.file_focus)
     changed = R.changed_files(g, files)
     banner = R.changed_banner(g, changed)
