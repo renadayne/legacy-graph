@@ -95,6 +95,47 @@ def test_render():
     check(explore(b, "x", budget=None) is not None and len(explore(b, "RecalcTotal")) <= 8000, "S7b: default budget")
 
 
+def test_mcp():
+    import io
+    import json
+    import tempfile
+    import shutil
+    from mfcgraph_core import mcp
+    from mfcgraph_core.index import save_graph
+    check([t["name"] for t in mcp.tool_list({})] == ["mfc_explore"], "S8: only mfc_explore by default")
+    names = [t["name"] for t in mcp.tool_list({"MFCGRAPH_MCP_TOOLS": "explore,trace, mfc_callers"})]
+    check(names == ["mfc_explore", "mfc_callers", "mfc_trace"], "S8: env enables more tools", names)
+    check(len(mcp.tool_list({"MFCGRAPH_MCP_TOOLS": "all"})) == len(mcp.TOOLS), "S8: all tools")
+    desc = mcp.tool_list({})[0]["description"]
+    check("File.cpp:120" in desc and "ID_FILE_EXPORT" in desc and "error message" in desc, "S8: query forms listed")
+    tmp = tempfile.mkdtemp(prefix="mfcgraph_mcp_")
+    try:
+        path = os.path.join(tmp, "index.mfg")
+        save_graph(graph("LegacyApp"), path)
+        reqs = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+                {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+                {"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+                 "params": {"name": "mfc_explore", "arguments": {"query": "MainFrm.cpp:69", "budget": 3000}}},
+                {"jsonrpc": "2.0", "id": 4, "method": "tools/call",
+                 "params": {"name": "mfc_trace", "arguments": {"query": "Export"}}}]
+        inp = io.BytesIO(b"".join(json.dumps(r).encode() + b"\n" for r in reqs))
+        out = io.BytesIO()
+        old = os.environ.pop("MFCGRAPH_MCP_TOOLS", None)
+        try:
+            mcp.run_mcp_server(path, inp, out)
+        finally:
+            if old is not None:
+                os.environ["MFCGRAPH_MCP_TOOLS"] = old
+        res = [json.loads(x) for x in out.getvalue().decode("utf-8").splitlines()]
+        check("mfc_explore FIRST" in res[0]["result"]["instructions"], "S8: instructions")
+        check([t["name"] for t in res[1]["result"]["tools"]] == ["mfc_explore"], "S8: tools/list")
+        text = res[2]["result"]["content"][0]["text"]
+        check("CMainFrame::OnFileExport" in text and len(text) <= 3000, "S8: explore over MCP", text[:300])
+        check(res[3]["result"]["isError"], "S8: disabled tool refused")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     test_rank()
     for t in [globals().get(n) for n in sorted(globals()) if n.startswith("test_") and n != "test_rank"]:

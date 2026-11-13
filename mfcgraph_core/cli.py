@@ -12,6 +12,8 @@ USAGE = """mfcgraph %s - offline code graph for C++/MFC (no network, no telemetr
 
 Usage:
   python mfcgraph.py index <root> [--codepage 1258] [--exclude dir1;dir2] [-v]
+  python mfcgraph.py explore  <question | names | File.cpp:120 | ID | "error text"> [--budget N] [--scope DIR]
+                                                      one call: relevant source + flow + impact (start here)
   python mfcgraph.py search   <text>                 classes, functions, IDs, menu/dialog captions
   python mfcgraph.py node     <symbol> [--no-code]   location, signature, flags, source
   python mfcgraph.py callers  <symbol> [--depth 5]   incl. message map -> menu/accelerator/toolbar
@@ -33,16 +35,16 @@ Common options:
 
 def _parse(argv):
     a = {"pos": [], "root": "", "index": "", "exclude": "", "codepage": 1258, "depth": -1, "lines": 80,
-         "no_code": False, "show_names": False, "verbose": False}
+         "no_code": False, "show_names": False, "verbose": False, "budget": 0, "scope": ""}
     i = 0
     while i < len(argv):
         s = argv[i]
         nxt = argv[i + 1] if i + 1 < len(argv) else ""
-        if s in ("--root", "--index", "--exclude"):
+        if s in ("--root", "--index", "--exclude", "--scope"):
             a[s[2:]] = nxt
             i += 2
             continue
-        if s in ("--codepage", "--depth", "--lines"):
+        if s in ("--codepage", "--depth", "--lines", "--budget"):
             try:
                 a[s[2:]] = int(nxt)
             except ValueError:
@@ -120,11 +122,14 @@ def main(argv=None):
         return 2
     rest = " ".join(a["pos"])
     depth = a["depth"]
-    needs_arg = cmd in ("search", "node", "callers", "callees", "impact", "trace", "msgmap", "context", "refs")
+    needs_arg = cmd in ("search", "node", "callers", "callees", "impact", "trace", "msgmap", "context", "refs", "explore")
     if needs_arg and not rest:
         sys.stderr.write("error: missing argument for '%s'\n" % cmd)
         return 1
-    if cmd == "search":
+    if cmd == "explore":
+        from .explore import explore
+        out = explore(g, rest, a["budget"] or None, a["scope"] or None)
+    elif cmd == "search":
         out = q_search(g, rest, 40)
     elif cmd == "node":
         out = q_node(g, rest, not a["no_code"], a["lines"])

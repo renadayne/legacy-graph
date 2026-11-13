@@ -35,6 +35,9 @@ CASES = [
     ("diagnose", ["diagnose"]),
     ("refs_strpath", ["refs", "CExportDlg::m_strPath"]),
     ("refs_values_bare", ["refs", "m_values"]),
+    ("explore_export", ["explore", "Export failed WriteTextFile"]),
+    ("explore_anchor", ["explore", "MainFrm.cpp:69", "--budget", "3000"]),
+    ("explore_typo", ["explore", "WriteTextFle"]),
 ]
 
 

@@ -1,0 +1,6 @@
+mfc_explore: 0 functions in 0 files (budget 8000, used 219). Scope: (all)
+
+No code matched 'WriteTextFle'. Name a function, class, ID, file or quote the exact message text.
+
+## Did you mean
+WriteTextFle → WriteTextFile
