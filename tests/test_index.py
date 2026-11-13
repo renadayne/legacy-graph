@@ -40,7 +40,7 @@ def test_v2_roundtrip(g, tmp):
     path = os.path.join(tmp, "index.mfg")
     save_graph(g, path)
     with open(path, encoding="utf-8") as fh:
-        check(fh.readline().startswith("MFCGRAPH\t2\t"), "S2b: header version 2")
+        check(fh.readline().startswith("MFCGRAPH\t3\t"), "S17: header version 3")
     g2 = load_graph(path)
     check(g2.texts == g.texts and len(g.texts) > 0, "S2b: texts survive save/load", len(g.texts))
     check([(f.mtime, f.size) for f in g2.files] == [(f.mtime, f.size) for f in g.files], "S2b: mtime/size kept")

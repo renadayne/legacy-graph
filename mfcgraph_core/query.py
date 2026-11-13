@@ -603,6 +603,9 @@ def q_diagnose(g, show_names=False):
         "encodings:" + enc,
         "files with unbalanced braces: " + s("files.brace_error"),
         "tokens skipped in inactive #if branches: " + s("tokens.inactive_skipped"),
+        "#if conditions: evaluated %s, guessed (first branch kept) %s%s" % (
+            s("pp.evaluated"), s("pp.guessed"),
+            "" if (g.pp_defines or g.pp_undefs or g.pp_undef_unknown) else "  (use index --define/--undef to decide them)"),
         "classes: " + s("classes"),
         "functions: defined %s, declared-only %s, framework entry points %s, message handlers %s" % (
             s("functions.defined"), s("functions.decl_only"), s("functions.framework_entry"),

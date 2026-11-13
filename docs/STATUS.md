@@ -125,3 +125,9 @@
   SetWindowLongPtr subclass, CreateThread + PostMessage(WM_APP_SAVE_DONE), SetTimer callback, .c files (new/class names, static
   ParseLine twice), #ifdef USE_INI_FILE stub / #else real code, small MFC part. CP932: MainWnd.cpp, OptionsDlg.cpp, ExportDlg.cpp.
 - `tests/scenarios_win32.json` (13). Baseline (codepage 932, before S17–S19): recall 0.808; misses: menu/ID → case dispatch (2, 5, 1).
+
+## S17 — #if evaluation (--define / --undef / --undef-unknown)
+- New `mfcgraph_core/pp_eval.py`: `PPConfig(defines, undefs, undef_unknown).for_file(is_c) -> FileMacros` (ifdef / eval_if, 3-valued:
+  unknown → first branch kept, counted "guessed"); builtins _WIN32 WIN32 _MSC_VER, __cplusplus for non-.c. In-file #define/#undef tracked.
+- `lexer.filter_conditionals(tokens, macros=None, stats=None)` (None = v0.2 behaviour). `build_index(..., pp=PPConfig)`; CLI index options.
+- Index v3: `D` records keep the config; diagnose "#if conditions: evaluated N, guessed M". Tests: `tests/test_pp.py` (27).

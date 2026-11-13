@@ -136,6 +136,9 @@ class Graph:
         self.edges = []
         self.stats = {}
         self.texts = []   # (func_node, line, text): string literals in function bodies (index v2)
+        self.pp_defines = []        # [(name, value)] from index --define (v3)
+        self.pp_undefs = []         # [name] from index --undef
+        self.pp_undef_unknown = False
         self.refs = []    # (func_node, line, "Class::field" | "g_name" | "ID_X", mode 'r'|'w'); DDX counts as 'w'
         self.out = []
         self.inn = []
