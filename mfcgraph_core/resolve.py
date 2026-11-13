@@ -575,6 +575,8 @@ class Resolver:
                 target = nodes[c].qname + "::" + name
             elif not recv and name.startswith(("g_", "s_")):
                 target = name
+            elif not recv and name in self.ids and not name.startswith(("m_", "g_", "s_")):
+                target = name  # resource / message id used in the body (e.g. AfxMessageBox(IDS_X))
             else:
                 continue
             self.refs_resolved += 1
