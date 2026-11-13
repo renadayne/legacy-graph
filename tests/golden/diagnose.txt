@@ -2,6 +2,7 @@ mfcgraph diagnose (counts only; no names, no code)
 files: 15  (source 6 of which C 0, header 8, resource 1)
 encodings:  ansi:1258=1  ascii=13  utf16le=1
 files with unbalanced braces: 0
+files skipped because of an internal error: 0
 tokens skipped in inactive #if branches: 72
 #if conditions: evaluated 1, guessed (first branch kept) 6  (use index --define/--undef to decide them)
 classes: 6

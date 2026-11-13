@@ -602,6 +602,7 @@ def q_diagnose(g, show_names=False):
             s("files.total"), s("files.source"), s("files.c"), s("files.header"), s("files.resource")),
         "encodings:" + enc,
         "files with unbalanced braces: " + s("files.brace_error"),
+        "files skipped because of an internal error: " + s("files.failed"),
         "tokens skipped in inactive #if branches: " + s("tokens.inactive_skipped"),
         "#if conditions: evaluated %s, guessed (first branch kept) %s%s" % (
             s("pp.evaluated"), s("pp.guessed"),

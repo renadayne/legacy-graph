@@ -38,6 +38,24 @@ def index_path_for_root(root):
     return os.path.join(root, ".mfcgraph", "index.mfg")
 
 
+_RAW_LISTS = ("funcs", "classes", "msgmaps", "includes", "defines", "dynamics", "dialogs", "uiitems", "strings")
+
+
+def _extract_one(raw, fi, rel, text, is_rc, pp, pp_stats):
+    macros = pp.for_file(cmode.is_c_file(rel)) if pp is not None else None
+    active, dropped = filter_conditionals(lex(text, is_rc), macros, pp_stats)
+    raw.files[fi].skipped_tokens = dropped
+    if is_rc:
+        extract_rc(active, fi, raw)
+    elif cmode.is_c_file(rel):
+        active, _ = cmode.protect(active)
+        before = cmode.snapshot(raw)
+        extract_cpp(active, fi, raw)
+        cmode.restore(raw, before)
+    else:
+        extract_cpp(active, fi, raw)
+
+
 def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbose=False, pp=None):
     """pp: optional pp_eval.PPConfig (--define/--undef/--undef-unknown); None keeps "first #if branch wins"."""
     if not os.path.isdir(root):
@@ -80,18 +98,15 @@ def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbos
         raw.files.append(SrcFile(rel, enc, hashlib.blake2b(data, digest_size=8).hexdigest(), text.count("\n") + 1,
                                  mtime=mtime, size=len(data)))
         is_rc = os.path.splitext(p)[1].lower() in RC_EXTS
-        macros = pp.for_file(cmode.is_c_file(rel)) if use_pp else None
-        active, dropped = filter_conditionals(lex(text, is_rc), macros, pp_stats)
-        raw.files[fi].skipped_tokens = dropped
-        if is_rc:
-            extract_rc(active, fi, raw)
-        elif cmode.is_c_file(rel):
-            active, _ = cmode.protect(active)
-            before = cmode.snapshot(raw)
-            extract_cpp(active, fi, raw)
-            cmode.restore(raw, before)
-        else:
-            extract_cpp(active, fi, raw)
+        sizes = {k: len(getattr(raw, k)) for k in _RAW_LISTS}
+        try:
+            _extract_one(raw, fi, rel, text, is_rc, pp if use_pp else None, pp_stats)
+        except Exception as ex:  # one odd file must never stop the whole index
+            for k, nlen in sizes.items():
+                del getattr(raw, k)[nlen:]
+            raw.failed.append(rel)
+            sys.stderr.write("warning: skipped %s (%s: %s) - please report the line numbers, not the code\n"
+                             % (rel, type(ex).__name__, ex))
         if verbose and done % 500 == 0:
             sys.stderr.write("  %d/%d files\n" % (done, len(paths)))
 
@@ -106,6 +121,7 @@ def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbos
     resolve(raw, g)
     g.stats["pp.evaluated"] = str(pp_stats.get("evaluated", 0))
     g.stats["pp.guessed"] = str(pp_stats.get("guessed", 0))
+    g.stats["files.failed"] = str(len(raw.failed))
     return g
 
 
