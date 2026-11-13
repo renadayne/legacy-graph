@@ -26,3 +26,8 @@
 - `q_search` also lists `[text] "<literal>"  Func  file:line` (exact text 50, substring 35; below symbol hits).
 - `query.norm_text(s)` (NFC + casefold) and `query.text_hits(g, q) -> [(score, func_node, line, text)]` reusable by explore.
 - Golden `search_recalc` updated (+1 text hit). Tests in `tests/test_index.py`.
+
+## S3a — member/global variable references (extractor)
+- `RawFunc.refs = [(name, recv, line, mode)]` from `CppWalker.scan_refs`: ids after `.`/`->` (recv = previous ident or "?"),
+  or starting `m_ g_ s_`; not before `(` or `::`. mode 'w' for assignment ops/++/-- (also `m_a[i] = v`), else 'r'.
+- Tests in `tests/test_extract.py` (3 writes of m_nZoom in CLegacyView::OnViewZoom).
