@@ -10,4 +10,6 @@ message-map entries: 13  handler found in code 76.9%, handled by an MFC base cla
 unrecognised ON_ macros: 0 uses of 0 kinds  (add --show-names to list them)
 resources: dialogs 2, menu items 10, accelerators 4, toolbar buttons 4, strings 4
 #include resolved inside the tree: 87.5% of 32 (system/MFC headers are expected to be unresolved)
+string literals indexed: 21
+variable references: 57  resolved to a field/global/id 94.7%; stored: writes 13, reads 40
 graph: 170 nodes, 187 edges
