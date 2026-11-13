@@ -1,0 +1,8 @@
+RefreshAny  LegacyView.cpp:72
+  -> GetRefreshTarget  Util.cpp:73 [likely]
+     -> external: AfxGetMainWnd
+  -> CLegacyView::Refresh  LegacyView.cpp:65 [ambiguous]
+     -> external: CView::Invalidate
+  -> CMainFrame::Refresh  MainFrm.cpp:90 [ambiguous]
+     -> external: CFrameWnd::RedrawWindow
+  -> external: CView::Invalidate
