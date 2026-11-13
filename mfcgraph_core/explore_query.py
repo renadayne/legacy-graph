@@ -9,7 +9,7 @@ Interface:
       id         ID_ IDD_ IDC_ IDS_ IDR_ IDM_ WM_ UWM_ + upper case    value = token
       quoted     text inside "..." '...' “...” ‘...’ (kept verbatim)  value = text
       ident      CamelCase, contains "_", or starts with m_            value = token
-      word       anything else, lower-cased (NFC), stopwords removed   value = word
+      word       anything else, lower-cased (NFC), stopwords and STOP_PHRASES removed   value = word
 Terms keep query order; duplicates (same kind and value) are dropped.
 """
 import re
@@ -43,6 +43,13 @@ rồi mà này kia đó ấy các những một hai cái chiếc vào ra lên xu
 thế nào sao gì đâu ai bao nhiêu tại vì do nên để hãy giúp tìm xem kiểm tra lỗi sai hỏng bấm nhấn chọn nút
 hàm lớp file dòng mã code chỗ phần hiện hiển thị thấy bug module
 """.split())
+
+
+# Vietnamese meaning lives in syllable pairs: these symptom phrases ("shows a message", "press the button")
+# describe how the bug looks, and their single syllables ("báo") would otherwise match unrelated captions ("Báo cáo").
+STOP_PHRASES = ("thông báo", "hiển thị", "hiện ra", "báo lỗi", "bấm nút", "nhấn nút", "bị lỗi", "không được",
+                "error message", "message box", "pops up", "shows up")
+_RE_STOP_PHRASES = re.compile(r"(?<!\w)(?:%s)(?!\w)" % "|".join(re.escape(p) for p in STOP_PHRASES), re.I)
 
 
 def _norm(s):
@@ -109,6 +116,7 @@ def parse_query(text):
         pos = m.end()
     chunks.append((pos, text[pos:]))
     for base, chunk in chunks:
+        chunk = _RE_STOP_PHRASES.sub(lambda m: " " * len(m.group(0)), chunk)  # keep offsets
         for m in re.finditer(r"\S+", chunk):
             for tok in _split_word_token(m.group(0)):
                 t = _classify(tok)
