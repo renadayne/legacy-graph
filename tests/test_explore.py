@@ -67,6 +67,34 @@ def test_rank():
     check(rank(b, {}, ()) == ({}, []), "S6: no seeds -> empty")
 
 
+def test_render():
+    from mfcgraph_core.explore import explore
+    g = graph("LegacyApp")
+    out = explore(g, "Export failed WriteTextFile")
+    for sec in ("## Flow", "## Source", "## Blast radius"):
+        check(sec in out, "S7b: section " + sec, out)
+    check(out.index("## Flow") < out.index("## Source") < out.index("## Blast radius"), "S7b: section order")
+    check("69\t\t\tAfxMessageBox(_T(\"Export failed\"));" in out, "S7b: line-numbered source", out)
+    check("-> CLegacyDoc::ExportTo  LegacyDoc.cpp:45" in out, "S7b: flow lists the spine", out)
+    out = explore(g, "MainFrm.cpp:69")
+    check("57\tvoid CMainFrame::OnFileExport()" in out and "72\t}" in out, "S7b: anchored function in full", out)
+    out = explore(g, "WriteTextFle")
+    check("## Did you mean\nWriteTextFle → WriteTextFile" in out, "S7b: did you mean", out)
+    check(explore(g, "zzzz qqqq").startswith("mfc_explore: 0 functions"), "S7b: nothing matched")
+    over = []
+    for b in (300, 800, 1500, 2500, 4000, 8000):
+        for q in ("Export failed WriteTextFile", "MainFrm.cpp:69", "ID_FILE_EXPORT", "CExportDlg::m_strPath",
+                  '"Xuất dữ liệu"', "Recalculate zoom", "zzz"):
+            n = len(explore(g, q, budget=b))
+            if n > b:
+                over.append((q, b, n))
+    check(not over, "S7b: never over budget", over)
+    b = graph("BigApp")
+    out = explore(b, "bấm Tính lại thì tổng tiền sai trong module Billing")
+    check("Scope: Billing" in out.splitlines()[0], "S7b: scope shown in header", out.splitlines()[0])
+    check(explore(b, "x", budget=None) is not None and len(explore(b, "RecalcTotal")) <= 8000, "S7b: default budget")
+
+
 def main():
     test_rank()
     for t in [globals().get(n) for n in sorted(globals()) if n.startswith("test_") and n != "test_rank"]:
