@@ -76,9 +76,36 @@ def test_refs():
     check(got == want, "S3a: read/write modes", got)
 
 
+def test_c_mode():
+    from mfcgraph_core import cmode
+    src = ("BOOL DocAddRecord(DOCUMENT* pDoc, const char* line)\n{\n"
+           "    struct record *new = (struct record*)malloc(sizeof(*new));\n"
+           "    int class = ParseLine(line);\n    new->kind = class;\n    DocLinkRecord(pDoc, new);\n"
+           "    return TRUE;\n}\nvoid delete(struct list* this) { free(this); }\n"
+           "int template(int x) { return Twice(x); }\n")
+    raw = RawData()
+    toks, _ = filter_conditionals(lex(src, False))
+    toks, n = cmode.protect(toks)
+    before = cmode.snapshot(raw)
+    extract_cpp(toks, 0, raw)
+    cmode.restore(raw, before)
+    names = sorted(f.name for f in raw.funcs if f.is_def)
+    check(n > 0 and names == ["DocAddRecord", "delete", "template"], "S16: C functions named like C++ keywords", names)
+    f = func(raw, "", "DocAddRecord")
+    check(f is not None and [c.name for c in f.calls] == ["malloc", "ParseLine", "DocLinkRecord"],
+          "S16: calls inside C body", f and [c.name for c in f.calls])
+    check(f is not None and ("kind", "new", 5, "w") in f.refs, "S16: new->kind write with receiver 'new'", f and f.refs)
+    check(f is not None and f.locals.get("new") == "record", "S16: local named new typed struct record", f and f.locals)
+    allnames = repr([(g.name, g.sig, [(c.name, c.recv) for c in g.calls], g.refs, g.locals) for g in raw.funcs])
+    check(cmode.MARK not in allnames, "S16: marker fully removed")
+    check(cmode.is_c_file("a/b/Doc.c") and not cmode.is_c_file("Doc.cpp") and not cmode.is_c_file("Doc.h"),
+          "S16: only .c files")
+
+
 def main():
     test_strings()
     test_refs()
+    test_c_mode()
     print("extract: %d passed, %d failed" % (passed, failed))
     return 1 if failed else 0
 
