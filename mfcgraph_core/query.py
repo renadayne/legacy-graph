@@ -269,6 +269,44 @@ def q_search(g, query, limit=40):
     return "\n".join(out) + "\n"
 
 
+def match_ref_targets(g, query):
+    """Ref targets matching query: exact 'Class::field', '...::field' suffix, or bare field name."""
+    q = query.strip()
+    targets = sorted({r[2] for r in g.refs})
+    for test in (lambda t: t == q, lambda t: t.endswith("::" + q), lambda t: t.lower().endswith(q.lower())
+                 and (len(t) == len(q) or t[-len(q) - 1] == ":")):
+        hit = [t for t in targets if test(t)]
+        if hit:
+            return hit
+    return []
+
+
+def q_refs(g, query, limit=40):
+    targets = match_ref_targets(g, query)
+    if not targets:
+        return "No variable references match '%s'. Try: search %s\n" % (query, query)
+    out = []
+    for t in targets:
+        rows = {"w": [], "r": []}
+        for (fn, line, target, mode) in g.refs:
+            if target != t:
+                continue
+            f = g.nodes[fn]
+            path = g.files[f.file].path if 0 <= f.file < len(g.files) else "?"
+            tag = " [DDX]" if mode == "w" and f.name == "DoDataExchange" else ""
+            rows[mode].append((path, line, "  %s  %s:%d%s" % (f.qname, path, line, tag)))
+        out.append("%s: %d write(s), %d read(s)" % (t, len(rows["w"]), len(rows["r"])))
+        for mode, title in (("w", "writes"), ("r", "reads")):
+            if not rows[mode]:
+                continue
+            out.append(title + ":")
+            lst = sorted(rows[mode])
+            out.extend(x[2] for x in lst[:limit])
+            if len(lst) > limit:
+                out.append("  ... %d more" % (len(lst) - limit))
+    return "\n".join(out) + "\n"
+
+
 def q_node(g, symbol, with_code=True, max_code_lines=80):
     nid, msg = _one_symbol(g, symbol)
     if nid is None:

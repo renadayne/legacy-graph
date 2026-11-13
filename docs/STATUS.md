@@ -36,3 +36,7 @@
 - `Graph.refs = [(func_node, line, target, mode)]`, target `Class::field` (class that declares it, via bases) or bare `g_x`/`s_x`.
   Receiver typed like call resolution (`this`, locals, fields). DDX member = 'w'. Index record `R\tfunc\tline\ttarget\tmode`.
 - `Resolver.field_owner(cls, name)`, `make_refs`. New stats: refs.total, refs.resolved, refs.writes, texts (not printed yet).
+
+## S3c — `refs` command
+- `refs <Class::m_x | m_x>`: per field "N write(s), M read(s)", then writes, reads (`Func  file:line`, DDX tagged).
+- `query.q_refs(g, q)`, `query.match_ref_targets(g, q)` (exact, `::suffix`, bare name). Golden cases refs_strpath, refs_values_bare.
