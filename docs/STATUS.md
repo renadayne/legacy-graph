@@ -45,3 +45,8 @@
 - New `mfcgraph_core/explore_query.py`: `parse_query(text) -> [Term(kind, value, extra)]`, kinds anchor/path/qualified/id/quoted/ident/word
   (anchor extra=(start,end); path extra="file"|"dir"; words lower-case NFC minus EN/VI stopwords incl. generic bug words).
 - Tests: `tests/test_explore_query.py` (24 cases, incl. Vietnamese, NFD input).
+
+## S7a — code window utilities
+- New `mfcgraph_core/explore_windows.py`: `windows_for(span, focus, max_lines, radius=6)`, `render(lines, windows, path)`,
+  `signature_only(lines, span)`, `elision(path, a, b)`. Signature + closing line always kept; merge gap <= 3; radius 6→4→2→0.
+- Tests: `tests/test_explore_windows.py` (13).
