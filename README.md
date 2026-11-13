@@ -1,6 +1,8 @@
-# mfcgraph 0.1 (bản Python)
+# mfcgraph 0.2 (bản Python)
 
 Công cụ dựng **đồ thị mã nguồn** cho codebase C++/MFC lâu năm, chạy **hoàn toàn offline**. Mục đích là giúp AI agent (GitHub Copilot) hỏi đúng chỗ thay vì đọc cả chục file, nhờ đó tốn ít token và credit hơn.
+
+v0.2 thêm một lệnh/tool chính: `explore` (`mfc_explore`). Từ một câu hỏi, tên hàm, ID hoặc thông báo lỗi, `explore` trả về mã nguồn liên quan, luồng gọi và phạm vi ảnh hưởng trong một lần gọi.
 
 - **Chỉ cần Python 3.7 trở lên**, đã có sẵn trên máy. **Chỉ dùng thư viện chuẩn của Python**: không `pip install`, không thư viện ngoài, không kết nối internet.
 - **Không cần build**, không có file `.exe` nào để ký số. Chạy thẳng `python mfcgraph.py ...`.
@@ -20,8 +22,8 @@ Công cụ hiểu được những chỗ mà công cụ thông thường bỏ s�
 | Cam kết | Cách kiểm chứng |
 | --- | --- |
 | Không có code mạng | `findstr /s /i "socket urllib http requests ftplib smtplib subprocess ctypes pickle" mfcgraph_core\*.py` chỉ ra đúng một dòng comment trong `mcp.py` |
-| Chỉ dùng thư viện chuẩn | Toàn bộ lệnh `import` nằm đầu mỗi file: `os`, `sys`, `re`, `json`, `time`, `hashlib`, `tempfile`, `unicodedata` và các module nội bộ `mfcgraph_core` |
-| Không telemetry, không tự cập nhật | Toàn bộ mã nguồn khoảng 3.000 dòng Python (kể cả comment) trong `mfcgraph_core/`, đọc hết được |
+| Chỉ dùng thư viện chuẩn | Toàn bộ lệnh `import` nằm đầu mỗi file: `os`, `sys`, `re`, `json`, `time`, `hashlib`, `unicodedata`, `difflib`, `collections` và các module nội bộ `mfcgraph_core`. Các module `explore*.py` cũng chỉ import thư viện chuẩn |
+| Không telemetry, không tự cập nhật | Toàn bộ mã nguồn khoảng 4.800 dòng Python (kể cả comment) trong `mfcgraph_core/`, đọc hết được |
 | Cái chạy chính là cái đọc | Không có bước build. File `.py` SA review là file chạy |
 | MCP không mở cổng | MCP (tùy chọn) giao tiếp qua stdin/stdout; code MCP chỉ được nạp khi gọi lệnh `serve` |
 | Không sửa cấu hình máy | Không ghi vào config của IDE/Copilot |
@@ -45,14 +47,18 @@ python --version
 
 Hoặc `py --version`. Cần 3.7 trở lên. Nếu máy dùng lệnh `py`, thay `python` bằng `py` trong mọi lệnh bên dưới.
 
-## 3. Chạy test (khoảng 1 giây)
+## 3. Chạy test
 
 ```bat
 cd mfcgraph-py
-python tests\test_mfcgraph.py
+python tests\run_all.py
 ```
 
-Kết quả mong đợi: `38 passed, 0 failed`.
+Kết quả mong đợi: dòng cuối là `ALL: OK`. Lệnh này chạy mọi bộ kiểm thử, kể cả đánh giá của `explore`. Dòng đánh giá đó có dạng:
+
+```
+mean recall 1.000 (target 0.90); within budget 14/14
+```
 
 ## 4. Chạy thử với dự án mẫu
 
@@ -79,6 +85,114 @@ Kết quả:
      -> util::LogMessage  Util.cpp:8  (see above)
      -> external: AfxMessageBox, CDialog::DoModal, CFrameWnd::GetActiveDocument
   handler [ON_UPDATE_COMMAND_UI]: CMainFrame::OnUpdateFileExport  MainFrm.cpp:74
+```
+
+### explore
+
+`explore` là lệnh nên dùng đầu tiên. Ví dụ:
+
+```bat
+python mfcgraph.py index samples\LegacyApp
+python mfcgraph.py explore "Export failed WriteTextFile" --root samples\LegacyApp
+```
+
+Kết quả (phần mã nguồn được rút gọn bằng dòng `...`):
+
+```
+Indexed 15 files in 0.01 s -> ...\samples\LegacyApp\.mfcgraph\index.mfg
+  classes 6, functions 45, message-map entries 13, dialogs 2, menu items 10
+Run 'mfcgraph diagnose' for quality numbers.
+```
+
+```
+mfc_explore: 10 functions in 3 files (budget 8000, used 4182). Scope: (all)
+
+## Flow
+Toolbar IDR_MAINFRAME button 3 / Menu IDR_MAINFRAME: File > Export... / Accelerator Ctrl+E
+  -> CMainFrame::OnFileExport  MainFrm.cpp:57
+  -> CLegacyDoc::ExportTo  LegacyDoc.cpp:45
+  -> CLegacyDoc::ExportCsv  LegacyDoc.cpp:67
+  -> util::WriteTextFile  Util.cpp:35
+
+## Source
+...
+
+## Blast radius
+CMainFrame::OnFileExport ← 0 callers, called by MFC via ID_FILE_EXPORT [ON_COMMAND]; UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E
+util::WriteTextFile ← 2 callers (CLegacyDoc::ExportCsv, CLegacyDoc::ExportXml)
+CLegacyDoc::ExportTo ← 1 caller (CMainFrame::OnFileExport); UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E
+
+## Not shown (ask mfc_explore with these names)
+CLegacyDoc::HasData  LegacyDoc.h:19 · CLegacyApp::InitInstance  LegacyApp.cpp:31
+```
+
+Ý nghĩa từng phần:
+
+- **Flow**: chuỗi đi từ thao tác trên giao diện (menu, phím tắt, toolbar) tới command ID, handler, rồi tới các hàm handler gọi.
+- **Source**: mã nguồn của các hàm liên quan nhất, có số dòng, nhóm theo file. Hàm có nhãn `msg-handler`, `update-ui-handler` hoặc `framework-entry` được MFC gọi. Dòng bị bỏ được ghi dạng `… line 73 elided — mfc_explore "MainFrm.cpp:73" returns it`. Muốn xem đoạn đó, hỏi lại với `MainFrm.cpp:73` hoặc khoảng `MainFrm.cpp:70-76`.
+- **Blast radius**: hàm được ai gọi (`← N callers`) và tới những giao diện nào (`UI entries`). Dùng để biết sửa hàm thì ảnh hưởng tới đâu.
+- **Not shown**: các hàm liên quan nhưng không in mã nguồn, vì hết ngân sách ký tự. Tên trong mục này dùng để hỏi lại `explore`.
+- **Did you mean**: xuất hiện khi tên không khớp với index. Ví dụ, với tên sai `CLegacyDoc::ExportCvs`:
+
+```
+mfc_explore: 0 functions in 0 files (budget 8000, used 333). Scope: (all)
+
+No code matched 'CLegacyDoc::ExportCvs'. Name a function, class, ID, file or quote the exact message text.
+
+## Did you mean
+CLegacyDoc::ExportCvs → CLegacyDoc::ExportCsv, CLegacyDoc::ExportTo, CLegacyDoc::ExportXml, CLegacyDoc::m_values, CLegacyDoc::HasData
+```
+
+Tùy chọn:
+
+- `--budget N`: giới hạn số ký tự của kết quả. Mặc định tùy kích thước dự án (8.000, 12.000 hoặc 16.000). Tăng `N` để có thêm mã nguồn; giảm `N` để tốn ít token hơn.
+- `--scope DIR`: ưu tiên các file trong thư mục `DIR`, ví dụ `Billing`. Hàm ngoài thư mục vẫn có thể xuất hiện nhưng bị giảm ưu tiên.
+
+Cảnh báo file đã đổi: nếu file có mã nguồn trong kết quả được sửa sau lần `index`, kết quả có dòng `⚠ Changed since last index: …; re-run index (code of these files not shown)`. Mã nguồn của các file đó không được in. Chạy lại `index` để cập nhật.
+
+Các dạng câu hỏi `explore` nhận:
+
+- Mô tả lỗi bằng tiếng Anh hoặc tiếng Việt.
+- Tên hàm hoặc tên lớp.
+- `Class::Method`.
+- `File.cpp:120` hoặc `File.cpp:100-140`.
+- Tên thư mục module, ví dụ `Billing/`.
+- Caption của menu hoặc nút bấm.
+- ID: `ID_FILE_EXPORT`, `IDD_xxx`, `IDC_xxx`, `IDS_xxx`, `WM_APP_xxx`.
+- Nguyên văn thông báo lỗi (nên đặt trong dấu ngoặc kép).
+
+### refs và search
+
+`refs` cho biết hàm nào ghi và hàm nào đọc một biến thành viên. Nhãn `[DDX]` nghĩa là ghi qua DDX của dialog.
+
+```bat
+python mfcgraph.py refs CExportDlg::m_strPath --root samples\LegacyApp
+```
+
+```
+CExportDlg::m_strPath: 3 write(s), 5 read(s)
+writes:
+  CExportDlg::CExportDlg  ExportDlg.cpp:13
+  CExportDlg::DoDataExchange  ExportDlg.cpp:24 [DDX]
+  CExportDlg::OnBnClickedBrowse  ExportDlg.cpp:52
+reads:
+  CExportDlg::DoDataExchange  ExportDlg.cpp:25
+  CExportDlg::OnBnClickedBrowse  ExportDlg.cpp:49
+  CExportDlg::OnOK  ExportDlg.cpp:65
+  CExportDlg::OnOK  ExportDlg.cpp:70
+  CMainFrame::OnFileExport  MainFrm.cpp:67
+```
+
+`search` cũng tìm chuỗi ký tự trong thân hàm (kết quả có nhãn `[text]`). Tìm không phân biệt chữ hoa, chữ thường. Tiếng Việt được so sánh sau khi chuẩn hóa Unicode NFC, nên chữ có dấu tổ hợp và chữ dựng sẵn vẫn khớp nhau.
+
+```bat
+python mfcgraph.py search "export failed" --root samples\LegacyApp
+```
+
+```
+2 match(es) for 'export failed':
+  [text] "Export failed"  CMainFrame::OnFileExport  MainFrm.cpp:69
+  [text] "Export failed"  CMainFrame::OnFileExport  MainFrm.cpp:70
 ```
 
 Thử thêm (thêm `--root samples\LegacyApp`, hoặc `cd samples\LegacyApp` rồi gọi `python ..\..\mfcgraph.py ...`):
@@ -115,12 +229,14 @@ Sau đó chỉ cần gõ `mfcgraph trace Export`.
 
 | Lệnh | Dùng khi |
 | --- | --- |
-| `search <chữ>` | Chỉ biết một từ: tìm lớp, hàm, ID, caption menu/dialog |
+| `explore <câu hỏi \| tên \| File.cpp:120 \| ID \| "thông báo lỗi"> [--budget N] [--scope DIR]` | **Bắt đầu từ đây.** Một lần gọi: mã nguồn liên quan + luồng + ảnh hưởng |
+| `search <chữ>` | Chỉ biết một từ: tìm lớp, hàm, ID, caption menu/dialog, chuỗi ký tự trong code |
 | `trace <caption menu \| ID_xxx \| IDD_xxx>` | "Bấm cái này thì code nào chạy?" |
 | `node <Lớp::Hàm>` | Vị trí, chữ ký, cờ, mã nguồn của một hàm/lớp |
 | `callers <hàm> [--depth 5]` | Ai gọi hàm này (kể cả qua message map, lên đến UI) |
 | `callees <hàm> [--depth 2]` | Hàm này gọi gì |
 | `impact <hàm>` | Sửa hàm này thì ảnh hưởng những hàm, UI, file nào |
+| `refs <Lớp::m_field \| m_field>` | Biến thành viên được ghi và đọc ở đâu |
 | `msgmap <Lớp>` | Toàn bộ message map của một lớp |
 | `context <hàm> [--lines 80]` | Gói ngữ cảnh Markdown để đưa cho AI |
 | `diagnose [--show-names]` | Số liệu chất lượng (chỉ con số) |
@@ -135,45 +251,44 @@ Mỗi lời gọi được gắn **độ tin cậy**:
 
 ## 6. Đưa kết quả cho Copilot
 
-**Cách A: "context pack" (không cần MCP, dùng được ngay).**
-
-```bat
-python mfcgraph.py context CMainFrame::OnFileExport > ctx.md
-python mfcgraph.py trace "Export" >> ctx.md
-```
-
-Rồi đưa cho Copilot bằng `#file:ctx.md` thay vì mở nhiều file nguồn.
-
-**Cách B: MCP (tùy chọn, chỉ khi SA đồng ý).**
+### 6.1. MCP (tùy chọn, chỉ khi SA đồng ý)
 
 Điều kiện:
 - Admin bật policy **"MCP servers in Copilot"**.
 - Visual Studio 2022 17.14 trở lên / VS 2026, hoặc VS Code 1.99 trở lên.
 - Copilot Chat ở chế độ **Agent**.
 
-Tạo `.mcp.json` ở thư mục solution (hoặc `.vscode\mcp.json` với VS Code):
+Mặc định MCP chỉ mở tool `mfc_explore`. Muốn bật thêm tool, đặt biến môi trường `MFCGRAPH_MCP_TOOLS` trong khối `env` của server:
+- `explore,refs,trace,callers`: chỉ các tool được liệt kê (có thể bỏ tiền tố `mfc_`).
+- `all`: bật mọi tool.
+
+Các tool có thể bật: `mfc_explore`, `mfc_refs`, `mfc_search`, `mfc_node`, `mfc_callers`, `mfc_callees`, `mfc_impact`, `mfc_trace`, `mfc_context`, `mfc_msgmap`, `mfc_status`.
+
+Visual Studio 2022: tạo file `.mcp.json` trong thư mục solution:
 
 ```json
-{
-  "servers": {
-    "mfcgraph": {
-      "type": "stdio",
-      "command": "python",
-      "args": ["C:\\tools\\mfcgraph-py\\mfcgraph.py", "serve", "--root", "D:\\src\\MyProduct"]
-    }
-  }
-}
+{"servers": {"mfcgraph": {"type": "stdio", "command": "python", "args": ["C:\\tools\\mfcgraph-py\\mfcgraph.py", "serve", "--root", "C:\\src\\MyApp"], "env": {"MFCGRAPH_MCP_TOOLS": "explore"}}}}
 ```
 
-Hướng dẫn cho Copilot (thêm vào `.github\copilot-instructions.md`):
+VS Code: tạo file `.vscode\mcp.json`:
 
-```markdown
-This is a legacy C++/MFC codebase. An MCP server "mfcgraph" indexes it.
-- Before reading files, use mfc_trace (menu caption, ID_xxx, IDD_xxx) or mfc_search to locate code.
-- Use mfc_context <Class::Method> to get the code plus callers/callees instead of opening whole files.
-- Before changing a function, run mfc_impact to see affected functions and UI entry points.
-- Functions flagged framework-entry or msg-handler are called by MFC; they are not dead code.
+```json
+{"servers": {"mfcgraph": {"type": "stdio", "command": "python", "args": ["C:\\tools\\mfcgraph-py\\mfcgraph.py", "serve", "--root", "C:\\src\\MyApp"], "env": {"MFCGRAPH_MCP_TOOLS": "explore"}}}}
 ```
+
+Hướng dẫn cho Copilot: copy file `docs/copilot-instructions.md` của repo này vào `.github\copilot-instructions.md` của repo công ty. File đó bằng tiếng Anh, nhắc Copilot gọi `mfc_explore` trước khi mở file.
+
+### 6.2. Không có MCP (fallback)
+
+Nếu không bật được MCP, tạo file ngữ cảnh bằng `explore`:
+
+```bat
+python mfcgraph.py explore "câu hỏi hoặc tên hàm" --root C:\src\MyApp > ctx.md
+```
+
+Rồi trong Copilot Chat gõ `#file:ctx.md` để đính kèm file. Có thể dùng `python mfcgraph.py context <hàm> > ctx.md` để lấy gói ngữ cảnh của một hàm.
+
+`ctx.md` chứa mã nguồn công ty: giữ trên máy, không commit vào repo.
 
 ## 7. Gửi phản hồi để cải thiện (không lộ mã nguồn)
 
@@ -209,14 +324,25 @@ Khi thấy công cụ hiểu sai một đoạn code, hãy viết lại cấu tr�
 mfcgraph.py                 lệnh chạy
 mfcgraph_core/encoding.py   nhận diện UTF-8/UTF-16/ANSI code page
 mfcgraph_core/lexer.py      lexer C++/RC chịu lỗi, lọc #if
-mfcgraph_core/extract_cpp.py  lớp, hàm, lời gọi, message map, DDX, RUNTIME_CLASS, IDD
+mfcgraph_core/extract_cpp.py  lớp, hàm, lời gọi, message map, DDX, RUNTIME_CLASS, IDD, chuỗi, biến
 mfcgraph_core/extract_rc.py   dialog, menu, accelerator, toolbar, string table
 mfcgraph_core/resolve.py    resolve tên, độ tin cậy, override, framework entry
 mfcgraph_core/index.py      quét thư mục, lưu/đọc index
-mfcgraph_core/query.py      search / node / callers / callees / impact / trace / context / diagnose
+mfcgraph_core/query.py      search / node / callers / callees / impact / trace / refs / context / diagnose
+mfcgraph_core/explore_query.py  tách câu hỏi của explore thành các thành phần (tên, đường dẫn, ID, cụm trong ngoặc kép, từ khóa)
+mfcgraph_core/explore_seed.py   tìm các hàm xuất phát từ thành phần câu hỏi, có trọng số
+mfcgraph_core/explore_rank.py   xếp hạng hàm (PageRank cá nhân trên đồ thị con) và tìm đường gọi chính (spine)
+mfcgraph_core/explore_windows.py chọn các đoạn dòng quanh điểm quan trọng, giữ chữ ký, đánh dấu dòng bị bỏ
+mfcgraph_core/explore_render.py phân bổ ngân sách ký tự, dựng Flow/Source/Blast radius/Not shown/Did you mean, kiểm tra file đã đổi
+mfcgraph_core/explore.py    ghép các bước: phân tích → tìm hàm xuất phát → xếp hạng → dựng kết quả
 mfcgraph_core/mcp.py        MCP server qua stdio (tùy chọn)
 mfcgraph_core/cli.py        giao diện dòng lệnh
-tests/test_mfcgraph.py      38 kiểm thử trên samples/LegacyApp
+tests/test_mfcgraph.py      kiểm thử trên samples/LegacyApp
+tests/run_all.py            chạy mọi bộ kiểm thử
+tests/golden_test.py        so sánh output CLI với tests/golden/*.txt (--update để ghi lại)
+tests/eval_explore.py       đo recall của explore trên tests/scenarios.json; lỗi nếu recall trung bình < 0.9 hoặc vượt budget
+tests/scenarios.json        14 kịch bản: câu hỏi + hàm bắt buộc phải có trong kết quả
+samples/BigApp/             dự án mẫu thứ hai (47 file, MDI, nhiều module), dùng cho kịch bản explore
 ```
 
 Định dạng index giống hệt bản C++: hai bản đã được đối chiếu và cho kết quả trùng khớp trên gần 4.000 file C++ thật.

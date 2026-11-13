@@ -101,3 +101,8 @@
 - 20,022 files: index 13.2 s, load 1.4 s, index 26 MB, peak RAM 437 MB (< 1.5 GB: no SQLite needed for v0.2).
 - explore was up to 2.5 s → fixed: cached segment→node word index, word weight spread over > 40 hits, PPR on top 120 seeds with
   precomputed transitions. Now 0.3–1.3 s per query (first call includes cache build). BigApp recall unchanged (1.000).
+
+## S12 — documentation (doc-writer, reviewed)
+- README (VI) for v0.2: explore (real output), refs, text search, MCP default tool + `MFCGRAPH_MCP_TOOLS`, `.mcp.json` for VS/VS Code,
+  fallback `explore … > ctx.md` + `#file:ctx.md`, stdlib audit list (no tempfile in core; + difflib, collections), ~4,800 lines.
+- New `docs/copilot-instructions.md` (EN) to copy into `.github/copilot-instructions.md`.
