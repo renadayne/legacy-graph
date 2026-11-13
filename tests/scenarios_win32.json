@@ -1,0 +1,115 @@
+[
+  {
+    "id": 1,
+    "query": "\"保存に失敗しました\"",
+    "must_include": [
+      "MainWndProc",
+      "DocSave"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 2,
+    "query": "\"保存\" menu does nothing",
+    "must_include": [
+      "MainWndProc",
+      "DocSave"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 3,
+    "query": "IDC_BTN_APPLY interval not saved",
+    "must_include": [
+      "OptionsDlgProc",
+      "ApplyOptions",
+      "SaveOptions"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 4,
+    "query": "\"エクスポートに失敗しました\"",
+    "must_include": [
+      "Export_OnCommand",
+      "ExportCsv"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 5,
+    "query": "IDD_EXPORT browse button",
+    "must_include": [
+      "Export_OnCommand",
+      "BrowseForFile"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 6,
+    "query": "interval edit box accepts letters, should be digits only",
+    "must_include": [
+      "EditSubclassProc",
+      "InstallDigitFilter"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 7,
+    "query": "save finished but status bar not updated WM_APP_SAVE_DONE",
+    "must_include": [
+      "SaveThreadProc",
+      "OnSaveDone"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 8,
+    "query": "Doc.c DocAddRecord",
+    "must_include": [
+      "DocAddRecord"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 9,
+    "query": "Import.c ParseLine wrong column",
+    "must_include": [
+      "ParseLine@Import.c"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 10,
+    "query": "options not loaded from registry at startup LoadOptions",
+    "must_include": [
+      "LoadOptions",
+      "WinMain"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 11,
+    "query": "IDM_REPORT_PRINT",
+    "must_include": [
+      "CReportWnd::OnReportPrint"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 12,
+    "query": "MainWnd.cpp:36",
+    "must_include": [
+      "MainWndProc"
+    ],
+    "max_chars": 8000
+  },
+  {
+    "id": 13,
+    "query": "blink timer BlinkTimerProc",
+    "must_include": [
+      "BlinkTimerProc"
+    ],
+    "max_chars": 8000
+  }
+]
