@@ -56,3 +56,10 @@
   m_dDiscount written 4x (one via DDX), static RoundTo in 2 files, FormatMoney overload, property sheet, ON_NOTIFY, worker thread PostMessage.
 - Encodings: BigApp.rc UTF-16LE, Billing/InvoiceDlg.cpp CP1258, Report/ExportPdf.cpp CP932 (decoded as cp1258 with default codepage: expected).
 - `tests/scenarios.json`: 14 scenarios {id, query, must_include ("Name@path" for duplicates), max_chars 8000}.
+
+## S5 — seeding
+- New `mfcgraph_core/explore_seed.py`: `seed(graph, terms, scope_dirs=(), query_text="") -> SeedResult(seeds{node:(w,reason)}, exact,
+  pinned_files, scope_dirs, focus{node:lines}, file_focus, unmatched, suggestions, texts)`. Weights at top of file (docstring explains).
+- Extras: word == directory name -> scope; captions found verbatim in free query text count as quoted; duplicates prefer pinned/scope files.
+- Extractor/resolver: resource/message ids used in bodies become refs (target "IDS_X"), so `AfxMessageBox(IDS_X)` is findable.
+- Tests: `tests/test_explore_seed.py` (19, LegacyApp + BigApp).
