@@ -63,8 +63,22 @@ def test_strings():
           f and f.strings)
 
 
+def test_refs():
+    f = func(extract_file("LegacyView.cpp"), "CLegacyView", "OnViewZoom")
+    w = [r for r in (f.refs if f else []) if r[0] == "m_nZoom" and r[3] == "w"]
+    check(len(w) == 3, "S3a: 3 writes of m_nZoom in OnViewZoom", f and f.refs)
+    src = ("void F()\n{\n if (m_a == 1) m_b += 2;\n ++m_c; p->x = 1; d.y; m_arr[i] = 3;\n"
+           " Foo(m_z); m_q.Get(); g_n--;\n}\n")
+    f = func(extract_text(src), "", "F")
+    got = sorted((r[0], r[1], r[3]) for r in f.refs)
+    want = sorted([("m_a", "", "r"), ("m_b", "", "w"), ("m_c", "", "w"), ("x", "p", "w"), ("y", "d", "r"),
+                   ("m_arr", "", "w"), ("m_z", "", "r"), ("m_q", "", "r"), ("g_n", "", "w")])
+    check(got == want, "S3a: read/write modes", got)
+
+
 def main():
     test_strings()
+    test_refs()
     print("extract: %d passed, %d failed" % (passed, failed))
     return 1 if failed else 0
 

@@ -85,6 +85,7 @@ def _wordch(c):
 _ESCAPE = re.compile(r"\\(?:x[0-9A-Fa-f]+|[0-7]{1,3}|.)")
 _FORMAT = re.compile(r"%[-+ #0]*(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:hh|h|ll|l|L|z|j|t|I64|I32|I)?[A-Za-z%]")
 STRING_MAX = 200
+WRITE_OPS = frozenset(["=", "+=", "-=", "*=", "/=", "%=", "|=", "&=", "^=", "<<=", ">>=", "++", "--"])
 
 
 def clean_literal(text):
@@ -742,9 +743,48 @@ class CppWalker:
             if text:
                 f.strings.append((line, text))
 
+    def _ref_mode(self, x, b, e):
+        t = self.t
+        if x - 1 >= b and t[x - 1][0] == PUNCT and t[x - 1][1] in ("++", "--"):
+            return "w"
+        nx = x + 1
+        while nx < e and self.is_p(nx, "["):  # m_arr[i] = v: skip subscripts
+            depth = 0
+            while nx < e:
+                if self.is_p(nx, "["):
+                    depth += 1
+                elif self.is_p(nx, "]"):
+                    depth -= 1
+                    if depth == 0:
+                        break
+                nx += 1
+            nx += 1
+        if nx < e and t[nx][0] == PUNCT and t[nx][1] in WRITE_OPS:
+            return "w"
+        return "r"
+
+    def scan_refs(self, f, b, e):
+        """Record (name, recv, line, mode) for x.name / p->name and for m_/g_/s_ identifiers not called."""
+        t, is_p = self.t, self.is_p
+        for x in range(b, e):
+            k, name, line = t[x]
+            if k != IDENT or name in KEYWORDS or is_p(x + 1, "(") or is_p(x + 1, "::"):
+                continue
+            recv = ""
+            after_member = x - 1 >= b and t[x - 1][0] == PUNCT and t[x - 1][1] in (".", "->")
+            if after_member:
+                if x - 2 >= b and t[x - 2][0] == IDENT:
+                    recv = t[x - 2][1]
+                else:
+                    recv = "?"
+            elif not name.startswith(("m_", "g_", "s_")):
+                continue
+            f.refs.append((name, recv, line, self._ref_mode(x, b, e)))
+
     def scan_body(self, f, b, e):
         self.scan_locals(f, b, e)
         self.scan_strings(f, b, e)
+        self.scan_refs(f, b, e)
         t, pm = self.t, self.pm
         is_p, is_id = self.is_p, self.is_id
         for x in range(b, e):
