@@ -12,6 +12,7 @@ USAGE = """mfcgraph %s - offline code graph for C++/MFC (no network, no telemetr
 
 Usage:
   python mfcgraph.py index <root> [--codepage 1258] [--exclude dir1;dir2] [-v]
+                     [--define "A;B=1"] [--undef "C;D"] [--undef-unknown]   pick #ifdef/#else branches by macros
   python mfcgraph.py explore  <question | names | File.cpp:120 | ID | "error text"> [--budget N] [--scope DIR]
                                                       one call: relevant source + flow + impact (start here)
   python mfcgraph.py search   <text>                 classes, functions, IDs, menu/dialog captions
@@ -35,12 +36,12 @@ Common options:
 
 def _parse(argv):
     a = {"pos": [], "root": "", "index": "", "exclude": "", "codepage": 1258, "depth": -1, "lines": 80,
-         "no_code": False, "show_names": False, "verbose": False, "budget": 0, "scope": ""}
+         "no_code": False, "show_names": False, "verbose": False, "budget": 0, "scope": "", "define": "", "undef": "", "undef_unknown": False}
     i = 0
     while i < len(argv):
         s = argv[i]
         nxt = argv[i + 1] if i + 1 < len(argv) else ""
-        if s in ("--root", "--index", "--exclude", "--scope"):
+        if s in ("--root", "--index", "--exclude", "--scope", "--define", "--undef"):
             a[s[2:]] = nxt
             i += 2
             continue
@@ -55,6 +56,8 @@ def _parse(argv):
             a["no_code"] = True
         elif s == "--show-names":
             a["show_names"] = True
+        elif s == "--undef-unknown":
+            a["undef_unknown"] = True
         elif s in ("-v", "--verbose"):
             a["verbose"] = True
         else:
@@ -89,7 +92,9 @@ def main(argv=None):
         excludes = [x.strip() for x in a["exclude"].split(";") if x.strip()]
         t0 = time.time()
         try:
-            g = build_index(root, a["codepage"], excludes, verbose=a["verbose"])
+            from .pp_eval import PPConfig, parse_defines, parse_names
+            pp = PPConfig(parse_defines(a["define"]), parse_names(a["undef"]), a["undef_unknown"])
+            g = build_index(root, a["codepage"], excludes, verbose=a["verbose"], pp=pp)
         except ValueError as ex:
             sys.stderr.write("error: %s\n" % ex)
             return 2
