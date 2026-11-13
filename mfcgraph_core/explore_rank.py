@@ -1,7 +1,7 @@
 """Rank graph nodes around explore seeds and find the main flow ("spine") between them.
 
 Interface:
-    rank(graph, seeds, scope_dirs=()) -> (scores, spine)
+    rank(graph, seeds, scope_dirs=(), prefer_ids=None) -> (scores, spine)
       seeds   {node: weight} or {node: (weight, reason)} (explore_seed.SeedResult.seeds)
       scores  {node: float}  personalised PageRank mass, scope- and spine-adjusted (only nodes reached)
       spine   list[list[node]]  call-direction paths between top seeds (and, for a lone seed, the path
@@ -41,9 +41,9 @@ GENERIC_ID_FANOUT = 2   # an id handled by more functions than this is generic: 
 
 CONF_W = {"exact": 1.0, "likely": 0.7, "heuristic": 0.5, "ambiguous": 0.3, "": 1.0}
 WALK_KINDS = frozenset(["calls", "handled_by", "triggers", "sends", "overrides", "binds", "uses_dialog", "contains",
-                        "case_calls"])
+                        "case_calls", "callback"])
 # forward (call-direction) kinds for the spine: src -> dst
-FORWARD_KINDS = frozenset(["calls", "handled_by", "triggers", "sends", "case_calls"])
+FORWARD_KINDS = frozenset(["calls", "handled_by", "triggers", "sends", "case_calls", "callback"])
 
 
 def _weight(seeds, n):
@@ -182,14 +182,31 @@ def shortest_path(g, a, b, max_len=MAX_PATH):
     return path[::-1]
 
 
-def entry_path(g, target, max_len=MAX_PATH):
-    """Shortest reverse path from target to a UI item, message handler or framework entry (as a forward path)."""
+def _reverse(g):
+    cached = getattr(g, "_explore_rev", None)
+    if cached is None:
+        cached = {}
+        for u, lst in enumerate(_forward(g)):
+            for v in lst:
+                cached.setdefault(v, []).append(u)
+        g._explore_rev = cached
+    return cached
+
+
+def entry_path(g, target, max_len=MAX_PATH, prefer_ids=None):
+    """Shortest reverse path from target to a UI item, message handler or framework entry (as a forward path).
+    prefer_ids: id nodes the query named; paths through other ids are tried only if none goes through these
+    (a window procedure handles dozens of ids, the asked one is the relevant entry)."""
+    if prefer_ids:
+        p = _entry_bfs(g, target, max_len, prefer_ids)
+        if p:
+            return p
+    return _entry_bfs(g, target, max_len, None)
+
+
+def _entry_bfs(g, target, max_len, only_ids):
     nodes = g.nodes
-    inn = {}
-    fwd = _forward(g)
-    for u, lst in enumerate(fwd):
-        for v in lst:
-            inn.setdefault(v, []).append(u)
+    inn = _reverse(g)
     prev = {target: None}
     q = deque([(target, 0)])
     found = None
@@ -202,6 +219,8 @@ def entry_path(g, target, max_len=MAX_PATH):
         if nodes[u].kind == "ui" or d >= max_len:
             continue
         for v in sorted(inn.get(u, ())):
+            if only_ids is not None and nodes[v].kind == "id" and v not in only_ids:
+                continue
             if v not in prev:
                 prev[v] = u
                 q.append((v, d + 1))
@@ -223,7 +242,7 @@ def _contained(p, q):
     return False
 
 
-def find_spine(g, seeds):
+def find_spine(g, seeds, prefer_ids=None):
     funcs = [s for s in seeds if g.nodes[s].kind == "function"]
     funcs.sort(key=lambda s: (-_weight(seeds, s), s))
     top = funcs[:TOP_SEEDS]
@@ -235,7 +254,7 @@ def find_spine(g, seeds):
                 if p and len(p) > 1:
                     paths.append(p)
     if not paths and top:
-        p = entry_path(g, top[0])
+        p = entry_path(g, top[0], prefer_ids=prefer_ids)
         if p and len(p) > 1:
             paths.append(p)
     paths.sort(key=lambda p: (-len(p), p))
@@ -246,7 +265,7 @@ def find_spine(g, seeds):
     return out
 
 
-def rank(g, seeds, scope_dirs=()):
+def rank(g, seeds, scope_dirs=(), prefer_ids=None):
     if not seeds:
         return {}, []
     if len(seeds) > MAX_SEEDS:  # weakest seeds (scattered word hits) add noise and cost, not relevance
@@ -254,7 +273,7 @@ def rank(g, seeds, scope_dirs=()):
         seeds = {s: seeds[s] for s in keep}
     members = subgraph(g, seeds)
     scores = ppr(g, seeds, members)
-    spine = find_spine(g, seeds)
+    spine = find_spine(g, seeds, prefer_ids)
     on_spine = {n for p in spine for n in p}
     for n in list(scores):
         if not in_scope(g, n, scope_dirs):

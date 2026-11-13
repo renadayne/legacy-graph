@@ -303,25 +303,42 @@ def ui_entries(g, fn, only_ids=None):
     ins = [g.edges[ei] for ei in g.inn[fn] if g.edges[ei].kind in ("handled_by", "case_calls")]
     if only_ids:
         sel = [e for e in ins if e.src in only_ids]
+        if not sel and any(e.kind == "handled_by" and g.nodes[e.dst].kind == "function" and
+                           any(x.startswith("case@") for x in [e.extra]) for e in ins):
+            return []  # a window procedure reached by other ids: its dozens of menus are not the answer
         ins = sel or [e for e in ins if e.kind == "handled_by"]
     else:
         ins = [e for e in ins if e.kind == "handled_by"]
+    dialogs = dialogs_of(g, fn)
     out = []
     for e in ins:
         for ej in g.inn[e.src]:
             t = g.edges[ej]
             if t.kind == "triggers":
                 out.append(g.nodes[t.src].name)
-            elif t.kind == "contains":
+            elif t.kind == "contains" and (not dialogs or t.src in dialogs):
                 out.append("%s control %s" % (g.nodes[t.src].name, t.extra))
     return sorted(set(out), key=out.index)
+
+
+def dialogs_of(g, fn):
+    """Dialog nodes used by fn or by a function that calls / dispatches to it (one hop): a shared IDOK button
+    belongs to the dialogs of this procedure only."""
+    procs = {fn} | {g.edges[ei].src for ei in g.inn[fn] if g.edges[ei].kind in ("calls", "callback")}
+    out = set()
+    for p in procs:
+        for ei in g.out[p]:
+            e = g.edges[ei]
+            if e.kind == "uses_dialog":
+                out.add(e.dst)
+    return out
 
 
 def _handled_macro(g, idn, fn):
     for ei in g.out[idn]:
         e = g.edges[ei]
-        if e.dst == fn and e.kind == "handled_by":
-            return e.extra.split("@")[0]
+        if e.dst == fn and e.kind in ("handled_by", "case_calls"):
+            return "case" if e.kind == "case_calls" else e.extra.split("@")[0]
     return ""
 
 

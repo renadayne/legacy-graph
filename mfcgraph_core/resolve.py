@@ -10,7 +10,7 @@ Confidence levels:
 import re
 
 from .extract_cpp import is_all_caps_ident
-from .win32 import make_dispatch
+from .win32 import make_dispatch, make_wiring
 from .model import Node, Edge
 
 FRAMEWORK_VIRTUALS = frozenset("""
@@ -73,6 +73,7 @@ class Resolver:
         self._anc_cache = {}
         self.refs_total = self.refs_resolved = 0
         self.dispatch_cases = 0
+        self.wiring_links = 0
 
     def run(self):
         self.g.files = self.r.files
@@ -86,6 +87,7 @@ class Resolver:
         self.make_resources()
         self.make_calls()
         make_dispatch(self)
+        make_wiring(self)
         self.make_includes()
         self.compute_stats()
 
@@ -685,6 +687,7 @@ class Resolver:
         s["includes.total"] = str(self.includes_total)
         s["includes.resolved"] = str(self.includes_resolved)
         s["win32.dispatch"] = str(self.dispatch_cases)
+        s["win32.wiring"] = str(self.wiring_links)
         s["win32.procs"] = str(sum(1 for n in self.g.nodes if "win32-proc" in n.flags.split(",")))
         s["refs.total"] = str(self.refs_total)
         s["refs.resolved"] = str(self.refs_resolved)
