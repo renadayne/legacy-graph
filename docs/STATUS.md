@@ -106,3 +106,7 @@
 - README (VI) for v0.2: explore (real output), refs, text search, MCP default tool + `MFCGRAPH_MCP_TOOLS`, `.mcp.json` for VS/VS Code,
   fallback `explore … > ctx.md` + `#file:ctx.md`, stdlib audit list (no tempfile in core; + difflib, collections), ~4,800 lines.
 - New `docs/copilot-instructions.md` (EN) to copy into `.github/copilot-instructions.md`.
+
+## S14 — packaging
+- `tools/package.py [--out DIR]` → `dist/mfcgraph-py-0.2.zip` (zipfile; excludes __pycache__, .mfcgraph, cpp-reference, .git, .claude).
+- `CHANGELOG.md`; VERSION = 0.2.0. v0.2 plan complete (S0–S14).
