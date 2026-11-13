@@ -33,6 +33,8 @@ CASES = [
     ("msgmap_legacyapp", ["msgmap", "CLegacyApp"]),
     ("search_recalc", ["search", "recalc"]),
     ("diagnose", ["diagnose"]),
+    ("refs_strpath", ["refs", "CExportDlg::m_strPath"]),
+    ("refs_values_bare", ["refs", "m_values"]),
 ]
 
 
