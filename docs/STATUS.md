@@ -75,3 +75,9 @@
 - New `mfcgraph_core/explore_render.py`: default_budget (8k/12k/16k), select_functions, allocate (file weight, 15% cut, min 600, max 70%,
   exact full first, windows, signatures), Flow / Source / Blast radius / Not shown / Did you mean sections (≤10 lines each).
 - Budget is hard: source share grows while room remains, then lowest-priority functions degrade (full→window→sig→dropped).
+
+## S8 — CLI + MCP
+- CLI: `explore <query> [--budget N] [--scope DIR]` (golden: explore_export, explore_anchor, explore_typo).
+- MCP: default tool list = `mfc_explore` only; `MFCGRAPH_MCP_TOOLS=explore,refs,trace,...|all` enables more (disabled calls refused).
+  New tools mfc_explore, mfc_refs; INSTRUCTIONS rewritten (explore first, treat source as read, MFC-called flags).
+- `mcp.enabled_tools(env)`, `mcp.tool_list(env)`, `run_mcp_server(path, stdin=None, stdout=None)` (testable in-process).

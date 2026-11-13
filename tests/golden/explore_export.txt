@@ -1,0 +1,108 @@
+mfc_explore: 10 functions in 3 files (budget 8000, used 3899). Scope: (all)
+
+## Flow
+Toolbar IDR_MAINFRAME button 3 / Menu IDR_MAINFRAME: File > Export... / Accelerator Ctrl+E
+  -> CMainFrame::OnFileExport  MainFrm.cpp:57
+  -> CLegacyDoc::ExportTo  LegacyDoc.cpp:45
+  -> CLegacyDoc::ExportCsv  LegacyDoc.cpp:67
+  -> util::WriteTextFile  Util.cpp:35
+
+## Source
+### MainFrm.cpp — CMainFrame::OnFileExport (msg-handler), CMainFrame::OnUpdateFileExport (update-ui-handler)
+57	void CMainFrame::OnFileExport()
+58	{
+59		CExportDlg dlg(this);
+60		if (dlg.DoModal() != IDOK)
+61			return;
+62	
+63		CLegacyDoc* pDoc = (CLegacyDoc*)GetActiveDocument();
+64		if (pDoc == NULL)
+65			return;
+66	
+67		if (!pDoc->ExportTo(dlg.m_strPath, dlg.m_nFormat, dlg.m_bOverwrite))
+68		{
+69			AfxMessageBox(_T("Export failed"));
+70			util::LogMessage(_T("Export failed"));
+71		}
+72	}
+… line 73 elided — mfc_explore "MainFrm.cpp:73" returns it
+74	void CMainFrame::OnUpdateFileExport(CCmdUI* pCmdUI)
+75	{
+76		CLegacyDoc* pDoc = (CLegacyDoc*)GetActiveDocument();
+77		pCmdUI->Enable(pDoc != NULL && pDoc->HasData());
+78	}
+### LegacyDoc.cpp — CLegacyDoc::ExportTo, CLegacyDoc::ExportCsv, CLegacyDoc::ExportXml
+45	BOOL CLegacyDoc::ExportTo(const CString& strPath, int nFormat, BOOL bOverwrite)
+46	{
+47		if (!bOverwrite && util::FileExists(strPath))
+48			return FALSE;
+49	
+50		BOOL bOk = FALSE;
+51		switch (nFormat)
+52		{
+53		case 0:
+54			bOk = ExportCsv(strPath);
+55			break;
+56		case 1:
+57			bOk = ExportXml(strPath);
+58			break;
+59		default:
+60			ASSERT(FALSE);
+61		}
+62		if (bOk)
+63			util::LogMessage(_T("Export done: ") + strPath);
+64		return bOk;
+65	}
+… line 66 elided — mfc_explore "LegacyDoc.cpp:66" returns it
+67	BOOL CLegacyDoc::ExportCsv(const CString& strPath)
+68	{
+69		CString text;
+70		for (int i = 0; i < m_values.GetSize(); i++)
+71			text += util::FormatNumber(m_values[i]) + _T("\r\n");
+72		return util::WriteTextFile(strPath, text);
+73	}
+… line 74 elided — mfc_explore "LegacyDoc.cpp:74" returns it
+75	BOOL CLegacyDoc::ExportXml(const CString& strPath)
+76	{
+77		CString text = _T("<values>");
+78		for (int i = 0; i < m_values.GetSize(); i++)
+79			text += _T("<v>") + util::FormatNumber(m_values[i]) + _T("</v>");
+80		text += _T("</values>");
+81		return util::WriteTextFile(strPath, text);
+82	}
+### Util.cpp — util::LogMessage, util::WriteTextFile; util::FileExists, util::IsValidPath, util::FormatNumber (signature only)
+8	void LogMessage(const CString& msg)
+9	{
+10		CStdioFile f;
+11		if (f.Open(_T("legacy.log"), CFile::modeCreate | CFile::modeNoTruncate | CFile::modeWrite))
+12		{
+13			f.SeekToEnd();
+14			f.WriteString(msg + _T("\n"));
+15		}
+16		TRACE(_T("%s\n"), (LPCTSTR)msg);
+17	}
+… line 18 elided — mfc_explore "Util.cpp:18" returns it
+19	BOOL FileExists(const CString& path)
+… lines 20-23 elided — mfc_explore "Util.cpp:20-23" returns them
+24	BOOL IsValidPath(const CString& path)
+… lines 25-34 elided — mfc_explore "Util.cpp:25-34" returns them
+35	BOOL WriteTextFile(const CString& path, const CString& text)
+36	{
+37		CStdioFile f;
+38		if (!f.Open(path, CFile::modeCreate | CFile::modeWrite | CFile::typeUnicode)) {
+39			LogMessage(_T("Cannot open ") + path);
+40			return FALSE;
+41		}
+42		f.WriteString(text);
+43		return TRUE;
+44	}
+… lines 45-56 elided — mfc_explore "Util.cpp:45-56" returns them
+57	CString FormatNumber(double value)
+
+## Blast radius
+CMainFrame::OnFileExport ← 0 callers, called by MFC via ID_FILE_EXPORT [ON_COMMAND]; UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E
+util::WriteTextFile ← 2 callers (CLegacyDoc::ExportCsv, CLegacyDoc::ExportXml)
+CLegacyDoc::ExportTo ← 1 caller (CMainFrame::OnFileExport); UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E
+
+## Not shown (ask mfc_explore with these names)
+CLegacyDoc::HasData  LegacyDoc.h:19 · CLegacyApp::InitInstance  LegacyApp.cpp:31
