@@ -151,3 +151,6 @@
 - Tuning (general rules): CJK menu mnemonics "(&S)" stripped from captions; CJK chars count 2 for the min caption length;
   calls just before a STRINGTABLE message use (IDS_/IDP_) are seeded like literal messages.
 - Recall @8000: Win32App 1.000 (13/13 in budget), BigApp 1.000. @4000: 0.936 / 0.905; @3000: 0.897 / 0.869.
+
+## S21a — diagnose, CHANGELOG, version 0.3.0
+- `diagnose` files line shows C files (`source N of which C M`); #if and win32 lines added in S17/S18/S19. VERSION 0.3.0, CHANGELOG 0.3.0.

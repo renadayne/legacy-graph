@@ -643,6 +643,7 @@ class Resolver:
         s["files.source"] = str(cpp)
         s["files.header"] = str(hdr)
         s["files.resource"] = str(rc)
+        s["files.c"] = str(sum(1 for f in self.r.files if f.path.lower().endswith(".c")))
         s["files.brace_error"] = str(brace)
         s["tokens.inactive_skipped"] = str(skipped)
         for k in sorted(enc):

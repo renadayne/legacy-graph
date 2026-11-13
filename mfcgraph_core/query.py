@@ -598,8 +598,8 @@ def q_diagnose(g, show_names=False):
     enc = "".join("  %s=%s" % (k[9:], v) for k, v in sorted(g.stats.items()) if k.startswith("encoding."))
     lines = [
         "mfcgraph diagnose (counts only; no names, no code)",
-        "files: %s  (source %s, header %s, resource %s)" % (s("files.total"), s("files.source"),
-                                                          s("files.header"), s("files.resource")),
+        "files: %s  (source %s of which C %s, header %s, resource %s)" % (
+            s("files.total"), s("files.source"), s("files.c"), s("files.header"), s("files.resource")),
         "encodings:" + enc,
         "files with unbalanced braces: " + s("files.brace_error"),
         "tokens skipped in inactive #if branches: " + s("tokens.inactive_skipped"),
