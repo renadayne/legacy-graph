@@ -1,0 +1,408 @@
+MFCGRAPH	1	LegacyApp	1258	2026-11-13 00:00:00
+F	ExportDlg.cpp	ansi:1258	2c2133fb39ec7139	74	0	0
+F	ExportDlg.h	ascii	43d51f8c23dccfe9	35	0	0
+F	LegacyApp.cpp	ascii	1be4fb09a5a0a8e3	100	0	0
+F	LegacyApp.h	ascii	8d019a15cfe99ef7	25	0	0
+F	LegacyApp.rc	utf16le	f6ae329dbb1e48c2	123	0	0
+F	LegacyDoc.cpp	ascii	440f9edc40658059	96	0	0
+F	LegacyDoc.h	ascii	2273d28530133363	39	0	0
+F	LegacyView.cpp	ascii	d0aee8f81d5c7cc9	79	0	0
+F	LegacyView.h	ascii	af2aa4d8a60737df	29	0	0
+F	MainFrm.cpp	ascii	d2ce150e6086efd0	94	0	0
+F	MainFrm.h	ascii	e2bdccf1baa4c013	27	0	0
+F	Util.cpp	ascii	d0082dc65f7c0b56	77	0	72
+F	Util.h	ascii	08322c00066767bc	14	0	0
+F	resource.h	ascii	7575dee6af0ec315	28	0	0
+F	stdafx.h	ascii	1ac95c504db24ed5	14	0	0
+N	0	file	ExportDlg.cpp	ExportDlg.cpp	0	1	74	-1			
+N	1	file	ExportDlg.h	ExportDlg.h	1	1	35	-1			
+N	2	file	LegacyApp.cpp	LegacyApp.cpp	2	1	100	-1			
+N	3	file	LegacyApp.h	LegacyApp.h	3	1	25	-1			
+N	4	file	LegacyApp.rc	LegacyApp.rc	4	1	123	-1			
+N	5	file	LegacyDoc.cpp	LegacyDoc.cpp	5	1	96	-1			
+N	6	file	LegacyDoc.h	LegacyDoc.h	6	1	39	-1			
+N	7	file	LegacyView.cpp	LegacyView.cpp	7	1	79	-1			
+N	8	file	LegacyView.h	LegacyView.h	8	1	29	-1			
+N	9	file	MainFrm.cpp	MainFrm.cpp	9	1	94	-1			
+N	10	file	MainFrm.h	MainFrm.h	10	1	27	-1			
+N	11	file	Util.cpp	Util.cpp	11	1	77	-1			
+N	12	file	Util.h	Util.h	12	1	14	-1			
+N	13	file	resource.h	resource.h	13	1	28	-1			
+N	14	file	stdafx.h	stdafx.h	14	1	14	-1			
+N	15	class	CExportDlg	CExportDlg	1	4	34	-1			bases: CDialog; IDD=IDD_EXPORT
+N	16	class	CAboutDlg	CAboutDlg	2	69	80	-1			bases: CDialog; IDD=IDD_ABOUTBOX
+N	17	class	CLegacyApp	CLegacyApp	3	6	22	-1			bases: CWinApp
+N	18	class	CLegacyDoc	CLegacyDoc	6	6	38	-1			bases: CDocument
+N	19	class	CLegacyView	CLegacyView	8	6	28	-1			bases: CView
+N	20	class	CMainFrame	CMainFrame	10	4	26	-1			bases: CFrameWnd
+N	21	function	CExportDlg	CExportDlg::CExportDlg	0	9	17	15		CExportDlg::CExportDlg(CWnd *pParent)	
+N	22	function	DoDataExchange	CExportDlg::DoDataExchange	0	19	29	15	framework-entry	void CExportDlg::DoDataExchange(CDataExchange *pDX)	
+N	23	function	OnInitDialog	CExportDlg::OnInitDialog	0	38	45	15	framework-entry	BOOL CExportDlg::OnInitDialog()	
+N	24	function	OnBnClickedBrowse	CExportDlg::OnBnClickedBrowse	0	47	55	15	msg-handler	void CExportDlg::OnBnClickedBrowse()	
+N	25	function	OnSelchangeFormat	CExportDlg::OnSelchangeFormat	0	57	60	15	msg-handler	void CExportDlg::OnSelchangeFormat()	
+N	26	function	OnOK	CExportDlg::OnOK	0	62	73	15	framework-entry	void CExportDlg::OnOK()	
+N	27	function	CLegacyApp	CLegacyApp::CLegacyApp	2	24	27	17		CLegacyApp::CLegacyApp()	
+N	28	function	InitInstance	CLegacyApp::InitInstance	2	31	58	17	framework-entry	BOOL CLegacyApp::InitInstance()	
+N	29	function	ExitInstance	CLegacyApp::ExitInstance	2	60	64	17	framework-entry	int CLegacyApp::ExitInstance()	
+N	30	function	CAboutDlg	CAboutDlg::CAboutDlg	2	82	84	16		CAboutDlg::CAboutDlg()	
+N	31	function	DoDataExchange	CAboutDlg::DoDataExchange	2	86	89	16	framework-entry	void CAboutDlg::DoDataExchange(CDataExchange *pDX)	
+N	32	function	OnAppAbout	CLegacyApp::OnAppAbout	2	95	99	17	msg-handler	void CLegacyApp::OnAppAbout()	
+N	33	function	CLegacyDoc	CLegacyDoc::CLegacyDoc	5	14	16	18		CLegacyDoc::CLegacyDoc()	
+N	34	function	~CLegacyDoc	CLegacyDoc::~CLegacyDoc	5	18	20	18		CLegacyDoc::~CLegacyDoc()	
+N	35	function	OnNewDocument	CLegacyDoc::OnNewDocument	5	22	30	18	framework-entry	BOOL CLegacyDoc::OnNewDocument()	
+N	36	function	Serialize	CLegacyDoc::Serialize	5	32	43	18	framework-entry	void CLegacyDoc::Serialize(CArchive &ar)	
+N	37	function	ExportTo	CLegacyDoc::ExportTo	5	45	65	18		BOOL CLegacyDoc::ExportTo(const CString &strPath, int nFormat, BOOL bOverwrite)	
+N	38	function	ExportCsv	CLegacyDoc::ExportCsv	5	67	73	18		BOOL CLegacyDoc::ExportCsv(const CString &strPath)	
+N	39	function	ExportXml	CLegacyDoc::ExportXml	5	75	82	18		BOOL CLegacyDoc::ExportXml(const CString &strPath)	
+N	40	function	Recalculate	CLegacyDoc::Recalculate	5	84	90	18		void CLegacyDoc::Recalculate()	
+N	41	function	OnToolsRecalc	CLegacyDoc::OnToolsRecalc	5	92	95	18	msg-handler	void CLegacyDoc::OnToolsRecalc()	
+N	42	function	HasData	CLegacyDoc::HasData	6	19	19	18		BOOL HasData()	
+N	43	function	CLegacyView	CLegacyView::CLegacyView	7	17	20	19		CLegacyView::CLegacyView()	
+N	44	function	~CLegacyView	CLegacyView::~CLegacyView	7	22	24	19		CLegacyView::~CLegacyView()	
+N	45	function	PreCreateWindow	CLegacyView::PreCreateWindow	7	26	29	19	framework-entry	BOOL CLegacyView::PreCreateWindow(CREATESTRUCT &cs)	
+N	46	function	GetDocument	CLegacyView::GetDocument	7	31	34	19		CLegacyDoc *CLegacyView::GetDocument()	
+N	47	function	OnDraw	CLegacyView::OnDraw	7	36	46	19	framework-entry	void CLegacyView::OnDraw(CDC *pDC)	
+N	48	function	OnLButtonDown	CLegacyView::OnLButtonDown	7	48	52	19	msg-handler	void CLegacyView::OnLButtonDown(UINT nFlags, CPoint point)	
+N	49	function	OnViewZoom	CLegacyView::OnViewZoom	7	54	63	19	msg-handler	void CLegacyView::OnViewZoom(UINT nID)	
+N	50	function	Refresh	CLegacyView::Refresh	7	65	68	19		void CLegacyView::Refresh()	
+N	51	function	RefreshAny	RefreshAny	7	72	78	-1		void RefreshAny(void *p)	
+N	52	function	CMainFrame	CMainFrame::CMainFrame	9	26	28	20		CMainFrame::CMainFrame()	
+N	53	function	~CMainFrame	CMainFrame::~CMainFrame	9	30	32	20		CMainFrame::~CMainFrame()	
+N	54	function	OnCreate	CMainFrame::OnCreate	9	34	48	20	msg-handler	int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)	
+N	55	function	PreCreateWindow	CMainFrame::PreCreateWindow	9	50	55	20	framework-entry	BOOL CMainFrame::PreCreateWindow(CREATESTRUCT &cs)	
+N	56	function	OnFileExport	CMainFrame::OnFileExport	9	57	72	20	msg-handler	void CMainFrame::OnFileExport()	
+N	57	function	OnUpdateFileExport	CMainFrame::OnUpdateFileExport	9	74	78	20	update-ui-handler	void CMainFrame::OnUpdateFileExport(CCmdUI *pCmdUI)	
+N	58	function	OnRecalcDone	CMainFrame::OnRecalcDone	9	80	88	20	msg-handler	LRESULT CMainFrame::OnRecalcDone(WPARAM wParam, LPARAM lParam)	
+N	59	function	Refresh	CMainFrame::Refresh	9	90	93	20		void CMainFrame::Refresh()	
+N	60	function	LogMessage	util::LogMessage	11	8	17	-1		void LogMessage(const CString &msg)	
+N	61	function	FileExists	util::FileExists	11	19	22	-1		BOOL FileExists(const CString &path)	
+N	62	function	IsValidPath	util::IsValidPath	11	24	32	-1		BOOL IsValidPath(const CString &path)	
+N	63	function	WriteTextFile	util::WriteTextFile	11	35	44	-1		BOOL WriteTextFile(const CString &path, const CString &text)	
+N	64	function	FormatNumber	util::FormatNumber	11	57	62	-1		CString FormatNumber(double value)	
+N	65	function	GetRefreshTarget	GetRefreshTarget	11	73	76	-1		CWnd *GetRefreshTarget()	
+N	66	external	CDialog	CDialog	-1	0	0	-1			class
+N	67	external	CWinApp	CWinApp	-1	0	0	-1			class
+N	68	external	CDocument	CDocument	-1	0	0	-1			class
+N	69	external	CView	CView	-1	0	0	-1			class
+N	70	external	CFrameWnd	CFrameWnd	-1	0	0	-1			class
+N	71	external	DoDataExchange	CDialog::DoDataExchange	-1	0	0	-1			framework
+N	72	external	OnInitDialog	CDialog::OnInitDialog	-1	0	0	-1			framework
+N	73	external	OnOK	CDialog::OnOK	-1	0	0	-1			framework
+N	74	external	InitInstance	CWinApp::InitInstance	-1	0	0	-1			framework
+N	75	external	ExitInstance	CWinApp::ExitInstance	-1	0	0	-1			framework
+N	76	external	OnNewDocument	CDocument::OnNewDocument	-1	0	0	-1			framework
+N	77	external	Serialize	CDocument::Serialize	-1	0	0	-1			framework
+N	78	external	PreCreateWindow	CView::PreCreateWindow	-1	0	0	-1			framework
+N	79	external	OnDraw	CView::OnDraw	-1	0	0	-1			framework
+N	80	external	PreCreateWindow	CFrameWnd::PreCreateWindow	-1	0	0	-1			framework
+N	81	id	IDD_ABOUTBOX	IDD_ABOUTBOX	13	5	0	-1			value=100
+N	82	id	IDR_MAINFRAME	IDR_MAINFRAME	13	6	0	-1			value=128; text="LegacyApp\\n\\nLegacy\\n\\n\\nLegacyApp.Document\\nLegacy.Document"
+N	83	id	IDD_EXPORT	IDD_EXPORT	13	7	0	-1			value=130
+N	84	id	IDC_EDIT_PATH	IDC_EDIT_PATH	13	8	0	-1			value=1000
+N	85	id	IDC_BTN_BROWSE	IDC_BTN_BROWSE	13	9	0	-1			value=1001
+N	86	id	IDC_CHK_OVERWRITE	IDC_CHK_OVERWRITE	13	10	0	-1			value=1002
+N	87	id	IDC_CMB_FORMAT	IDC_CMB_FORMAT	13	11	0	-1			value=1003
+N	88	id	ID_FILE_EXPORT	ID_FILE_EXPORT	13	12	0	-1			value=32771; text="Export the document to CSV or XML\\nExport"
+N	89	id	ID_TOOLS_RECALC	ID_TOOLS_RECALC	13	13	0	-1			value=32772; text="Recalculate all values\\nRecalculate"
+N	90	id	ID_VIEW_ZOOM_100	ID_VIEW_ZOOM_100	13	14	0	-1			value=32773; text="Zoom 100%\\nZoom 100%"
+N	91	id	ID_VIEW_ZOOM_150	ID_VIEW_ZOOM_150	13	15	0	-1			value=32774
+N	92	id	ID_VIEW_ZOOM_200	ID_VIEW_ZOOM_200	13	16	0	-1			value=32775
+N	93	id	WM_APP_RECALC_DONE	WM_APP_RECALC_DONE	14	13	0	-1			value=(WM_USER + 100)
+N	94	id	ID_APP_ABOUT	ID_APP_ABOUT	-1	0	0	-1			
+N	95	external	OnFileNew	CWinApp::OnFileNew	-1	0	0	-1			framework-handler
+N	96	id	ID_FILE_NEW	ID_FILE_NEW	-1	0	0	-1			
+N	97	external	OnFileOpen	CWinApp::OnFileOpen	-1	0	0	-1			framework-handler
+N	98	id	ID_FILE_OPEN	ID_FILE_OPEN	-1	0	0	-1			
+N	99	id	WM_LBUTTONDOWN	WM_LBUTTONDOWN	-1	0	0	-1			
+N	100	external	OnFilePrint	CView::OnFilePrint	-1	0	0	-1			framework-handler
+N	101	id	ID_FILE_PRINT	ID_FILE_PRINT	-1	0	0	-1			
+N	102	id	WM_CREATE	WM_CREATE	-1	0	0	-1			
+N	103	dialog	IDD_ABOUTBOX	IDD_ABOUTBOX	4	69	0	-1			caption="About LegacyApp"
+N	104	id	IDOK	IDOK	-1	0	0	-1			
+N	105	dialog	IDD_EXPORT	IDD_EXPORT	4	80	0	-1			caption="Xuất dữ liệu"
+N	106	id	IDCANCEL	IDCANCEL	-1	0	0	-1			
+N	107	ui	Toolbar IDR_MAINFRAME button 1	Toolbar IDR_MAINFRAME button 1	4	23	0	-1			toolbar
+N	108	ui	Toolbar IDR_MAINFRAME button 2	Toolbar IDR_MAINFRAME button 2	4	24	0	-1			toolbar
+N	109	ui	Toolbar IDR_MAINFRAME button 3	Toolbar IDR_MAINFRAME button 3	4	26	0	-1			toolbar
+N	110	ui	Toolbar IDR_MAINFRAME button 4	Toolbar IDR_MAINFRAME button 4	4	27	0	-1			toolbar
+N	111	ui	Menu IDR_MAINFRAME: File > New	Menu IDR_MAINFRAME: File > New	4	34	0	-1			menu
+N	112	ui	Menu IDR_MAINFRAME: File > Open...	Menu IDR_MAINFRAME: File > Open...	4	35	0	-1			menu
+N	113	ui	Menu IDR_MAINFRAME: File > Export...	Menu IDR_MAINFRAME: File > Export...	4	37	0	-1			menu
+N	114	ui	Menu IDR_MAINFRAME: File > Print...	Menu IDR_MAINFRAME: File > Print...	4	38	0	-1			menu
+N	115	ui	Menu IDR_MAINFRAME: File > Exit	Menu IDR_MAINFRAME: File > Exit	4	40	0	-1			menu
+N	116	id	ID_APP_EXIT	ID_APP_EXIT	-1	0	0	-1			
+N	117	ui	Menu IDR_MAINFRAME: View > Zoom > 100%	Menu IDR_MAINFRAME: View > Zoom > 100%	4	46	0	-1			menu
+N	118	ui	Menu IDR_MAINFRAME: View > Zoom > 150%	Menu IDR_MAINFRAME: View > Zoom > 150%	4	47	0	-1			menu
+N	119	ui	Menu IDR_MAINFRAME: View > Zoom > 200%	Menu IDR_MAINFRAME: View > Zoom > 200%	4	48	0	-1			menu
+N	120	ui	Menu IDR_MAINFRAME: Tools > Recalculate	Menu IDR_MAINFRAME: Tools > Recalculate	4	53	0	-1			menu
+N	121	ui	Menu IDR_MAINFRAME: Help > About LegacyApp...	Menu IDR_MAINFRAME: Help > About LegacyApp...	4	57	0	-1			menu
+N	122	ui	Accelerator Ctrl+N	Accelerator Ctrl+N	4	63	0	-1			accel
+N	123	ui	Accelerator Ctrl+O	Accelerator Ctrl+O	4	64	0	-1			accel
+N	124	ui	Accelerator Ctrl+E	Accelerator Ctrl+E	4	65	0	-1			accel
+N	125	ui	Accelerator F9	Accelerator F9	4	66	0	-1			accel
+N	126	external	AddString	CComboBox::AddString	-1	0	0	-1			
+N	127	external	SetCurSel	CComboBox::SetCurSel	-1	0	0	-1			
+N	128	external	DoModal	CFileDialog::DoModal	-1	0	0	-1			
+N	129	external	GetPathName	CFileDialog::GetPathName	-1	0	0	-1			
+N	130	external	UpdateData	CDialog::UpdateData	-1	0	0	-1			
+N	131	external	IsEmpty	CString::IsEmpty	-1	0	0	-1			
+N	132	external	AfxMessageBox	AfxMessageBox	-1	0	0	-1			
+N	133	external	SetRegistryKey	CWinApp::SetRegistryKey	-1	0	0	-1			
+N	134	external	LoadStdProfileSettings	CWinApp::LoadStdProfileSettings	-1	0	0	-1			
+N	135	external	GetProfileInt	CWinApp::GetProfileInt	-1	0	0	-1			
+N	136	external	AddDocTemplate	CWinApp::AddDocTemplate	-1	0	0	-1			
+N	137	external	ParseCommandLine	CWinApp::ParseCommandLine	-1	0	0	-1			
+N	138	external	ProcessShellCommand	CWinApp::ProcessShellCommand	-1	0	0	-1			
+N	139	external	ShowWindow	?::ShowWindow	-1	0	0	-1			
+N	140	external	UpdateWindow	?::UpdateWindow	-1	0	0	-1			
+N	141	external	WriteProfileInt	CWinApp::WriteProfileInt	-1	0	0	-1			
+N	142	external	DoModal	CDialog::DoModal	-1	0	0	-1			
+N	143	external	RemoveAll	CArray::RemoveAll	-1	0	0	-1			
+N	144	external	Add	CArray::Add	-1	0	0	-1			
+N	145	external	IsStoring	CArchive::IsStoring	-1	0	0	-1			
+N	146	external	GetSize	CArray::GetSize	-1	0	0	-1			
+N	147	external	UpdateAllViews	CDocument::UpdateAllViews	-1	0	0	-1			
+N	148	external	AfxGetMainWnd	AfxGetMainWnd	-1	0	0	-1			
+N	149	external	PostMessage	?::PostMessage	-1	0	0	-1			
+N	150	external	GetSize	?::GetSize	-1	0	0	-1			
+N	151	external	TextOut	CDC::TextOut	-1	0	0	-1			
+N	152	external	OnLButtonDown	CView::OnLButtonDown	-1	0	0	-1			
+N	153	external	Invalidate	CView::Invalidate	-1	0	0	-1			
+N	154	external	OnCreate	CFrameWnd::OnCreate	-1	0	0	-1			
+N	155	external	CreateEx	CToolBar::CreateEx	-1	0	0	-1			
+N	156	external	LoadToolBar	CToolBar::LoadToolBar	-1	0	0	-1			
+N	157	external	Create	CStatusBar::Create	-1	0	0	-1			
+N	158	external	SetIndicators	CStatusBar::SetIndicators	-1	0	0	-1			
+N	159	external	GetActiveDocument	CFrameWnd::GetActiveDocument	-1	0	0	-1			
+N	160	external	Enable	CCmdUI::Enable	-1	0	0	-1			
+N	161	external	Format	CString::Format	-1	0	0	-1			
+N	162	external	SetPaneText	CStatusBar::SetPaneText	-1	0	0	-1			
+N	163	external	RedrawWindow	CFrameWnd::RedrawWindow	-1	0	0	-1			
+N	164	external	Open	CStdioFile::Open	-1	0	0	-1			
+N	165	external	SeekToEnd	CStdioFile::SeekToEnd	-1	0	0	-1			
+N	166	external	WriteString	CStdioFile::WriteString	-1	0	0	-1			
+N	167	external	GetFileAttributes	return::GetFileAttributes	-1	0	0	-1			
+N	168	external	GetLength	CString::GetLength	-1	0	0	-1			
+N	169	external	FindOneOf	CString::FindOneOf	-1	0	0	-1			
+E	15	66	inherits	1	4	external	
+E	16	66	inherits	2	69	external	
+E	17	67	inherits	3	6	external	
+E	18	68	inherits	6	6	external	
+E	19	69	inherits	8	6	external	
+E	20	70	inherits	10	4	external	
+E	22	71	overrides	0	19	external	
+E	23	72	overrides	0	38	external	
+E	26	73	overrides	0	62	external	
+E	28	74	overrides	2	31	external	
+E	29	75	overrides	2	60	external	
+E	31	71	overrides	2	86	external	
+E	35	76	overrides	5	22	external	
+E	36	77	overrides	5	32	external	
+E	45	78	overrides	7	26	external	
+E	47	79	overrides	7	36	external	
+E	55	80	overrides	9	50	external	
+E	85	24	handled_by	0	33	exact	ON_BN_CLICKED@CExportDlg
+E	87	25	handled_by	0	34	exact	ON_CBN_SELCHANGE@CExportDlg
+E	94	32	handled_by	2	17	exact	ON_COMMAND@CLegacyApp
+E	96	95	handled_by	2	19	external	ON_COMMAND@CLegacyApp
+E	98	97	handled_by	2	20	external	ON_COMMAND@CLegacyApp
+E	89	41	handled_by	5	11	exact	ON_COMMAND@CLegacyDoc
+E	99	48	handled_by	7	12	exact	ON_WM_LBUTTONDOWN@CLegacyView
+E	90	49	handled_by	7	13	exact	ON_COMMAND_RANGE@CLegacyView
+E	92	49	handled_by	7	13	exact	ON_COMMAND_RANGE@CLegacyView
+E	91	49	handled_by	7	13	exact	ON_COMMAND_RANGE@CLegacyView
+E	101	100	handled_by	7	14	external	ON_COMMAND@CLegacyView
+E	102	54	handled_by	9	13	exact	ON_WM_CREATE@CMainFrame
+E	88	56	handled_by	9	14	exact	ON_COMMAND@CMainFrame
+E	88	57	handled_by	9	15	exact	ON_UPDATE_COMMAND_UI@CMainFrame
+E	93	58	handled_by	9	16	exact	ON_MESSAGE@CMainFrame
+E	103	104	contains	4	77	exact	DEFPUSHBUTTON "OK"
+E	105	84	contains	4	86	exact	EDITTEXT
+E	105	85	contains	4	87	exact	PUSHBUTTON "Chọn..."
+E	105	87	contains	4	89	exact	COMBOBOX
+E	105	86	contains	4	90	exact	CONTROL "Ghi đè nếu đã tồn tại"
+E	105	104	contains	4	92	exact	DEFPUSHBUTTON "OK"
+E	105	106	contains	4	93	exact	PUSHBUTTON "Hủy"
+E	107	96	triggers	4	23	exact	
+E	108	98	triggers	4	24	exact	
+E	109	88	triggers	4	26	exact	
+E	110	89	triggers	4	27	exact	
+E	111	96	triggers	4	34	exact	
+E	112	98	triggers	4	35	exact	
+E	113	88	triggers	4	37	exact	
+E	114	101	triggers	4	38	exact	
+E	115	116	triggers	4	40	exact	
+E	117	90	triggers	4	46	exact	
+E	118	91	triggers	4	47	exact	
+E	119	92	triggers	4	48	exact	
+E	120	89	triggers	4	53	exact	
+E	121	94	triggers	4	57	exact	
+E	122	96	triggers	4	63	exact	
+E	123	98	triggers	4	64	exact	
+E	124	88	triggers	4	65	exact	
+E	125	89	triggers	4	66	exact	
+E	15	105	uses_dialog	1	4	exact	
+E	16	103	uses_dialog	2	69	exact	
+E	22	71	calls	0	21	external	
+E	15	87	binds	0	23	exact	DDX_Control m_cmbFormat
+E	15	84	binds	0	24	exact	DDX_Text m_strPath
+E	15	86	binds	0	26	exact	DDX_Check m_bOverwrite
+E	15	87	binds	0	27	exact	DDX_CBIndex m_nFormat
+E	23	72	calls	0	40	external	
+E	23	126	calls	0	41	external	
+E	23	127	calls	0	43	external	
+E	24	128	calls	0	50	external	
+E	24	129	calls	0	52	external	
+E	24	130	calls	0	53	external	
+E	25	130	calls	0	59	external	
+E	26	130	calls	0	64	external	
+E	26	131	calls	0	65	external	
+E	26	132	calls	0	67	external	
+E	26	62	calls	0	70	exact	
+E	26	73	calls	0	72	external	
+E	28	74	calls	2	33	external	
+E	28	133	calls	2	35	external	
+E	28	134	calls	2	36	external	
+E	28	135	calls	2	37	external	
+E	28	60	calls	2	38	exact	
+E	28	136	calls	2	48	external	
+E	28	137	calls	2	51	external	
+E	28	138	calls	2	52	external	
+E	28	139	calls	2	55	external	
+E	28	140	calls	2	56	external	
+E	28	18	runtime_class	2	43	exact	
+E	28	20	runtime_class	2	44	exact	
+E	28	19	runtime_class	2	45	exact	
+E	29	141	calls	2	62	external	
+E	29	75	calls	2	63	external	
+E	31	71	calls	2	88	external	
+E	32	142	calls	2	98	external	
+E	35	76	calls	5	24	external	
+E	35	143	calls	5	26	external	
+E	35	144	calls	5	28	external	
+E	36	145	calls	5	34	external	
+E	36	146	calls	5	36	external	
+E	37	61	calls	5	47	exact	
+E	37	38	calls	5	54	exact	
+E	37	39	calls	5	57	exact	
+E	37	60	calls	5	63	exact	
+E	38	146	calls	5	70	external	
+E	38	64	calls	5	71	exact	
+E	38	63	calls	5	72	exact	
+E	39	146	calls	5	78	external	
+E	39	64	calls	5	79	exact	
+E	39	63	calls	5	81	exact	
+E	40	146	calls	5	86	external	
+E	40	147	calls	5	88	external	
+E	40	148	calls	5	89	external	
+E	40	149	calls	5	89	external	
+E	40	93	sends	5	89	heuristic	PostMessage
+E	41	40	calls	5	94	exact	
+E	42	146	calls	6	19	external	
+E	45	78	calls	7	28	external	
+E	47	46	calls	7	38	exact	
+E	47	150	calls	7	41	external	
+E	47	64	calls	7	43	exact	
+E	47	151	calls	7	44	external	
+E	48	46	calls	7	50	exact	
+E	48	40	calls	7	50	exact	
+E	48	152	calls	7	51	external	
+E	49	50	calls	7	62	exact	
+E	50	153	calls	7	67	external	
+E	51	153	calls	7	76	external	
+E	51	65	calls	7	77	likely	
+E	51	50	calls	7	77	ambiguous	
+E	51	59	calls	7	77	ambiguous	
+E	54	154	calls	9	36	external	
+E	54	155	calls	9	39	external	
+E	54	156	calls	9	39	external	
+E	54	157	calls	9	44	external	
+E	54	158	calls	9	46	external	
+E	55	80	calls	9	52	external	
+E	56	142	calls	9	60	external	
+E	56	159	calls	9	63	external	
+E	56	37	calls	9	67	exact	
+E	56	132	calls	9	69	external	
+E	56	60	calls	9	70	exact	
+E	57	159	calls	9	76	external	
+E	57	160	calls	9	77	external	
+E	57	42	calls	9	77	exact	
+E	58	161	calls	9	84	external	
+E	58	162	calls	9	85	external	
+E	58	59	calls	9	86	exact	
+E	59	163	calls	9	92	external	
+E	60	164	calls	11	11	external	
+E	60	165	calls	11	13	external	
+E	60	166	calls	11	14	external	
+E	61	167	calls	11	21	external	
+E	62	168	calls	11	26	external	
+E	62	60	calls	11	28	exact	
+E	62	169	calls	11	31	external	
+E	63	164	calls	11	38	external	
+E	63	60	calls	11	39	exact	
+E	63	166	calls	11	42	external	
+E	64	161	calls	11	60	external	
+E	65	148	calls	11	75	external	
+E	0	14	includes	0	4	exact	
+E	0	3	includes	0	5	exact	
+E	0	1	includes	0	6	exact	
+E	0	12	includes	0	7	exact	
+E	2	14	includes	2	3	exact	
+E	2	3	includes	2	4	exact	
+E	2	10	includes	2	5	exact	
+E	2	6	includes	2	6	exact	
+E	2	8	includes	2	7	exact	
+E	2	12	includes	2	8	exact	
+E	3	13	includes	3	4	exact	
+E	5	14	includes	5	3	exact	
+E	5	3	includes	5	4	exact	
+E	5	6	includes	5	5	exact	
+E	5	12	includes	5	6	exact	
+E	7	14	includes	7	3	exact	
+E	7	3	includes	7	4	exact	
+E	7	6	includes	7	5	exact	
+E	7	8	includes	7	6	exact	
+E	7	12	includes	7	7	exact	
+E	9	14	includes	9	3	exact	
+E	9	3	includes	9	4	exact	
+E	9	10	includes	9	5	exact	
+E	9	6	includes	9	6	exact	
+E	9	1	includes	9	7	exact	
+E	9	12	includes	9	8	exact	
+E	11	14	includes	11	2	exact	
+E	11	12	includes	11	3	exact	
+S	calls.ambiguous	1
+S	calls.exact	22
+S	calls.external	69
+S	calls.likely	1
+S	calls.total	93
+S	classes	6
+S	edges	187
+S	encoding.ansi:1258	1
+S	encoding.ascii	13
+S	encoding.utf16le	1
+S	files.brace_error	0
+S	files.header	8
+S	files.resource	1
+S	files.source	6
+S	files.total	15
+S	functions.decl_only	0
+S	functions.defined	45
+S	functions.framework_entry	11
+S	functions.msg_handler	9
+S	includes.resolved	28
+S	includes.total	32
+S	msgmap.entries	13
+S	msgmap.framework	3
+S	msgmap.resolved	10
+S	msgmap.unknown_macro_kinds	0
+S	msgmap.unknown_macro_names	
+S	msgmap.unknown_macros	0
+S	msgmap.unresolved	0
+S	nodes	170
+S	rc.accelerators	4
+S	rc.dialogs	2
+S	rc.menu_items	10
+S	rc.strings	4
+S	rc.toolbar_buttons	4
+S	tokens.inactive_skipped	72
