@@ -40,3 +40,8 @@
 ## S3c — `refs` command
 - `refs <Class::m_x | m_x>`: per field "N write(s), M read(s)", then writes, reads (`Func  file:line`, DDX tagged).
 - `query.q_refs(g, q)`, `query.match_ref_targets(g, q)` (exact, `::suffix`, bare name). Golden cases refs_strpath, refs_values_bare.
+
+## S4 — explore query parser
+- New `mfcgraph_core/explore_query.py`: `parse_query(text) -> [Term(kind, value, extra)]`, kinds anchor/path/qualified/id/quoted/ident/word
+  (anchor extra=(start,end); path extra="file"|"dir"; words lower-case NFC minus EN/VI stopwords incl. generic bug words).
+- Tests: `tests/test_explore_query.py` (24 cases, incl. Vietnamese, NFD input).
