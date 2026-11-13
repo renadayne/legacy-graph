@@ -119,3 +119,9 @@
 - New `mfcgraph_core/cmode.py`: in `.c` files, C++-only keywords (`new class this delete template operator …`) are marked before
   extraction and unmarked after (`protect`, `snapshot`, `restore`), so C names like `void delete(...)`, `struct x *new` parse.
 - `index.build_index` applies it to `.c` only (headers stay C++). Tests in `tests/test_extract.py`. (Committed before S15: sample still in progress.)
+
+## S15 — Win32App sample + scenarios
+- `samples/Win32App/` (26 files, sample-writer, reviewed): WndProc/DlgProc switch dispatch, HANDLE_MSG, DialogBox(Param), lpfnWndProc,
+  SetWindowLongPtr subclass, CreateThread + PostMessage(WM_APP_SAVE_DONE), SetTimer callback, .c files (new/class names, static
+  ParseLine twice), #ifdef USE_INI_FILE stub / #else real code, small MFC part. CP932: MainWnd.cpp, OptionsDlg.cpp, ExportDlg.cpp.
+- `tests/scenarios_win32.json` (13). Baseline (codepage 932, before S17–S19): recall 0.808; misses: menu/ID → case dispatch (2, 5, 1).
