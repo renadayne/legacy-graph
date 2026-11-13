@@ -11,3 +11,8 @@
 - New `tests/golden_test.py` (+ `tests/golden/*.txt`, 9 CLI cases): runs `cli.main` in-process on a temp index of samples/LegacyApp.
 - `python3 tests/golden_test.py` compares; `--update` rewrites. Reusable: `run_cases(cases, samples, update)`.
 - Tests: 38 passed + golden 9 passed.
+
+## S2a — string literals in function bodies
+- `RawFunc.strings = [(line, text)]`, filled by `CppWalker.scan_strings` (adjacent literals joined, whitespace collapsed).
+- `extract_cpp.clean_literal(text)`: "" if < 3 letters after removing escapes/printf specs; cut at 200 chars.
+- New `tests/test_extract.py` (extractor unit checks). Note: "Export failed" is MainFrm.cpp:69 (PLAN said 68).

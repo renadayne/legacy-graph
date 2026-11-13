@@ -5,6 +5,8 @@ stack, recognises function definitions by the "name ( ... ) [qualifiers] {"
 shape and scans bodies for calls. MFC constructs (message maps, DDX,
 RUNTIME_CLASS, IDD, IMPLEMENT_*) are recognised explicitly.
 """
+import re
+
 from .lexer import IDENT, NUMBER, STRING, CHAR, PUNCT, PP
 from .model import RawCall, RawFunc, RawClass, RawMsgEntry, RawMsgMap
 
@@ -78,6 +80,20 @@ def is_all_caps_ident(s):
 
 def _wordch(c):
     return c.isascii() and (c.isalnum() or c == "_")
+
+
+_ESCAPE = re.compile(r"\\(?:x[0-9A-Fa-f]+|[0-7]{1,3}|.)")
+_FORMAT = re.compile(r"%[-+ #0]*(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:hh|h|ll|l|L|z|j|t|I64|I32|I)?[A-Za-z%]")
+STRING_MAX = 200
+
+
+def clean_literal(text):
+    """Return the literal text to index, or "" if it has < 3 letters once escapes/format specs are removed."""
+    rest = _FORMAT.sub("", _ESCAPE.sub("", text))
+    if sum(1 for c in rest if c.isalpha()) < 3:
+        return ""
+    text = " ".join(text.split())  # tabs/newlines (raw strings) -> single spaces
+    return text[:STRING_MAX]
 
 
 def join_tokens(t, b, e):
@@ -709,8 +725,26 @@ class CppWalker:
                     and t[x + 3][1] in (";", "=", ",", ")", "[")):
                 loc[t[x + 2][1]] = s
 
+    def scan_strings(self, f, b, e):
+        """Collect string literals as (line, text); adjacent literals are joined."""
+        t = self.t
+        x = b
+        while x < e:
+            if t[x][0] != STRING:
+                x += 1
+                continue
+            line = t[x][2]
+            parts = []
+            while x < e and t[x][0] == STRING:
+                parts.append(t[x][1])
+                x += 1
+            text = clean_literal("".join(parts))
+            if text:
+                f.strings.append((line, text))
+
     def scan_body(self, f, b, e):
         self.scan_locals(f, b, e)
+        self.scan_strings(f, b, e)
         t, pm = self.t, self.pm
         is_p, is_id = self.is_p, self.is_id
         for x in range(b, e):
