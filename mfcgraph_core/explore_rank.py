@@ -18,6 +18,7 @@ Design (why):
   * Personalised PageRank (random walk with restart RESTART=0.3, ITERATIONS=20) from the seed weights: a node
     scores high when many strong short paths connect it to seeds, which is what "related code" means.
     Mass of nodes with no admissible neighbour returns to the restart vector.
+  * At most MAX_SEEDS (120) strongest seeds enter the walk: the tail is scattered weak word hits.
   * Scope: nodes in files outside scope_dirs are multiplied by OUT_OF_SCOPE=0.2 (kept, but rarely shown).
   * Spine: shortest call-direction path (<= MAX_PATH steps) between every ordered pair of the top TOP_SEEDS
     function seeds; MFC hops count as forward (UI -> ID -> handler, sender -> message ID -> handler).
@@ -33,6 +34,7 @@ SPINE_BOOST = 2.0
 TOP_SEEDS = 4
 MAX_PATH = 6
 MEMBER_W = 0.3
+MAX_SEEDS = 120
 
 CONF_W = {"exact": 1.0, "likely": 0.7, "heuristic": 0.5, "ambiguous": 0.3, "": 1.0}
 WALK_KINDS = frozenset(["calls", "handled_by", "triggers", "sends", "overrides", "binds", "uses_dialog", "contains"])
@@ -115,20 +117,24 @@ def ppr(g, seeds, members):
     adj = _edge_weights(g)
     total = sum(_weight(seeds, s) for s in seeds) or 1.0
     restart = {s: _weight(seeds, s) / total for s in seeds}
-    out_w = {u: sum(w for v, w in adj[u].items() if v in members) for u in members}
+    trans = {}
+    for u in members:
+        nb = [(v, w) for v, w in adj[u].items() if v in members]
+        ow = sum(w for _, w in nb)
+        if ow > 0:
+            trans[u] = [(v, w / ow) for v, w in sorted(nb)]
     p = dict(restart)
     for _ in range(ITERATIONS):
         nxt = {s: RESTART * r for s, r in restart.items()}
         lost = 0.0
         for u in sorted(p):
             mass = p[u] * (1.0 - RESTART)
-            ow = out_w.get(u, 0.0)
-            if ow <= 0:
+            tr = trans.get(u)
+            if tr is None:
                 lost += mass
                 continue
-            for v, w in adj[u].items():
-                if v in members:
-                    nxt[v] = nxt.get(v, 0.0) + mass * w / ow
+            for v, f in tr:
+                nxt[v] = nxt.get(v, 0.0) + mass * f
         if lost:
             for s, r in restart.items():
                 nxt[s] = nxt.get(s, 0.0) + lost * r
@@ -233,6 +239,9 @@ def find_spine(g, seeds):
 def rank(g, seeds, scope_dirs=()):
     if not seeds:
         return {}, []
+    if len(seeds) > MAX_SEEDS:  # weakest seeds (scattered word hits) add noise and cost, not relevance
+        keep = sorted(seeds, key=lambda s: (-_weight(seeds, s), s))[:MAX_SEEDS]
+        seeds = {s: seeds[s] for s in keep}
     members = subgraph(g, seeds)
     scores = ppr(g, seeds, members)
     spine = find_spine(g, seeds)
