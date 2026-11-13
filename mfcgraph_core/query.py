@@ -1,6 +1,7 @@
 """Read-only queries over the graph. Each returns compact text designed to be
 cheap for an AI agent to read (few tokens, precise locations)."""
 import os
+import unicodedata
 
 from .encoding import decode_with_label
 
@@ -205,6 +206,24 @@ def _pct(a, b):
 
 # ---------------------------------------------------------------- queries
 
+def norm_text(s):
+    """Case-insensitive, NFC-normalised form used to match string literals (Vietnamese safe)."""
+    return unicodedata.normalize("NFC", s).casefold()
+
+
+def text_hits(g, query):
+    """String literals containing query: list of (score, func_node, line, text); exact match scores higher."""
+    q = norm_text(query.strip().strip('"\''))
+    out = []
+    if not q:
+        return out
+    for (fn, line, text) in g.texts:
+        t = norm_text(text)
+        if q in t:
+            out.append((50 if t == q else 35, fn, line, text))
+    return out
+
+
 def q_search(g, query, limit=40):
     hits = []
     ql = query.lower()
@@ -226,11 +245,20 @@ def q_search(g, query, limit=40):
         if n.kind == "external":
             score -= 30
         hits.append((score, n.id))
+    texts = text_hits(g, query)
+    for i, th in enumerate(texts):
+        hits.append((th[0], -1 - i))
     if not hits:
         return "No match for '%s'.\n" % query
     hits.sort(key=lambda h: -h[0])  # stable
     out = ["%d match(es) for '%s'%s:" % (len(hits), query, " (showing top)" if len(hits) > limit else "")]
     for _, nid in hits[:limit]:
+        if nid < 0:
+            _, fn, line, text = texts[-1 - nid]
+            f = g.nodes[fn]
+            path = g.files[f.file].path if 0 <= f.file < len(g.files) else "?"
+            out.append('  [text] "%s"  %s  %s:%d' % (text, f.qname, path, line))
+            continue
         n = g.nodes[nid]
         s = "  [%s] %s" % (n.kind, _label(g, n))
         if n.kind == "id" and n.extra:

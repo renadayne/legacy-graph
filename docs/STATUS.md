@@ -21,3 +21,8 @@
 - Header `MFCGRAPH\t2`; `F` gets trailing `mtime size`; new `T\tfunc\tline\ttext`. `load_graph` reads v1 and v2.
 - `Graph.texts = [(func_node, line, text)]` (filled in `Resolver.make_calls`); `SrcFile.mtime/size` (v1: 0 / -1).
 - Tests: `tests/test_index.py` (+ `tests/data/legacy_v1.mfg` made with v1 code). `tests/run_all.py` runs every suite.
+
+## S2c — search by string literal
+- `q_search` also lists `[text] "<literal>"  Func  file:line` (exact text 50, substring 35; below symbol hits).
+- `query.norm_text(s)` (NFC + casefold) and `query.text_hits(g, q) -> [(score, func_node, line, text)]` reusable by explore.
+- Golden `search_recalc` updated (+1 text hit). Tests in `tests/test_index.py`.
