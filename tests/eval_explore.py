@@ -4,7 +4,9 @@ For each scenario: run explore(query, budget=max_chars) and check that every mus
 "## Source" section — at least one body line (not only the signature, not only its name in a list).
 "Name@path" means the definition of Name in that file. Prints a table and the totals.
 
-Run:  python3 tests/eval_explore.py [--show ID] [--samples DIR] [--scenarios FILE]
+Run:  python3 tests/eval_explore.py [--show ID] [--samples DIR] [--scenarios FILE] [--codepage N] [--undef-unknown]
+      python3 tests/eval_explore.py --win32     (= --samples samples/Win32App --scenarios tests/scenarios_win32.json
+                                                   --codepage 932 --undef-unknown)
 Exit code 1 if mean recall < 0.9 or any result exceeds its budget.
 """
 import io
@@ -88,6 +90,16 @@ def main(argv):
     samples = os.path.join(ROOT, "samples", "BigApp")
     scen = os.path.join(HERE, "scenarios.json")
     show = None
+    codepage = 1258
+    pp = None
+    if "--win32" in argv:
+        samples = os.path.join(ROOT, "samples", "Win32App")
+        scen = os.path.join(HERE, "scenarios_win32.json")
+        codepage = 932
+        argv = list(argv) + ["--undef-unknown"]
+    if "--undef-unknown" in argv:
+        from mfcgraph_core.pp_eval import PPConfig
+        pp = PPConfig({}, (), True)
     i = 0
     while i < len(argv):
         if argv[i] == "--show" and i + 1 < len(argv):
@@ -99,10 +111,13 @@ def main(argv):
         elif argv[i] == "--scenarios" and i + 1 < len(argv):
             scen = argv[i + 1]
             i += 1
+        elif argv[i] == "--codepage" and i + 1 < len(argv):
+            codepage = int(argv[i + 1])
+            i += 1
         i += 1
     with io.open(scen, encoding="utf-8") as fh:
         scenarios = json.load(fh)
-    g = build_index(samples)
+    g = build_index(samples, codepage, pp=pp)
     rows = evaluate(g, scenarios)
     print("%-4s %-7s %-12s %s" % ("id", "recall", "chars", "missing"))
     for r in rows:

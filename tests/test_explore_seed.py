@@ -11,7 +11,7 @@ sys.path.insert(0, ROOT)
 
 from mfcgraph_core.index import build_index  # noqa: E402
 from mfcgraph_core.explore_query import parse_query  # noqa: E402
-from mfcgraph_core.explore_seed import seed, segments  # noqa: E402
+from mfcgraph_core.explore_seed import seed, segments, clean_caption, text_len  # noqa: E402
 
 passed = 0
 failed = 0
@@ -42,6 +42,10 @@ def qn(g, r):
 def main():
     check(segments("OnBnClickedRecalc") == ["on", "bn", "clicked", "recalc"], "segments camel")
     check(segments("CExportDlg") == ["c", "export", "dlg"], "segments class prefix", segments("CExportDlg"))
+
+    check(clean_caption("保存(&S)\tCtrl+S") == "保存" and clean_caption("エクスポート(&E)...") == "エクスポート",
+          "S20: CJK mnemonic removed", clean_caption("保存(&S)\tCtrl+S"))
+    check(clean_caption("&Export...") == "Export" and text_len("保存") == 4 and text_len("Save") == 4, "S20: text_len")
 
     g = build_index(os.path.join(ROOT, "samples", "LegacyApp"))
     r = run(g, "MainFrm.cpp:69")
