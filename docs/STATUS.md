@@ -50,3 +50,9 @@
 - New `mfcgraph_core/explore_windows.py`: `windows_for(span, focus, max_lines, radius=6)`, `render(lines, windows, path)`,
   `signature_only(lines, span)`, `elision(path, a, b)`. Signature + closing line always kept; merge gap <= 3; radius 6→4→2→0.
 - Tests: `tests/test_explore_windows.py` (13).
+
+## S1 — second sample project + bug scenarios
+- `samples/BigApp/` (47 files, MDI, modules Billing/ Report/ Common/; written by sample-writer, reviewed): LOG_ERROR macro, STRINGTABLE ids,
+  m_dDiscount written 4x (one via DDX), static RoundTo in 2 files, FormatMoney overload, property sheet, ON_NOTIFY, worker thread PostMessage.
+- Encodings: BigApp.rc UTF-16LE, Billing/InvoiceDlg.cpp CP1258, Report/ExportPdf.cpp CP932 (decoded as cp1258 with default codepage: expected).
+- `tests/scenarios.json`: 14 scenarios {id, query, must_include ("Name@path" for duplicates), max_chars 8000}.
