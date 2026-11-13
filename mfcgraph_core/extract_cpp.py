@@ -85,6 +85,7 @@ def _wordch(c):
 _ESCAPE = re.compile(r"\\(?:x[0-9A-Fa-f]+|[0-7]{1,3}|.)")
 _FORMAT = re.compile(r"%[-+ #0]*(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:hh|h|ll|l|L|z|j|t|I64|I32|I)?[A-Za-z%]")
 STRING_MAX = 200
+_RE_RESOURCE_ID = re.compile(r"^(?:ID|IDD|IDC|IDS|IDR|IDM|IDP|WM|UWM)_[A-Z0-9_]+$")
 WRITE_OPS = frozenset(["=", "+=", "-=", "*=", "/=", "%=", "|=", "&=", "^=", "<<=", ">>=", "++", "--"])
 
 
@@ -764,7 +765,8 @@ class CppWalker:
         return "r"
 
     def scan_refs(self, f, b, e):
-        """Record (name, recv, line, mode) for x.name / p->name and for m_/g_/s_ identifiers not called."""
+        """Record (name, recv, line, mode) for x.name / p->name, for m_/g_/s_ identifiers not called, and for
+        resource/message ids (IDS_x, IDC_x, WM_APP_x ...) used in the body (resolved only if the id is known)."""
         t, is_p = self.t, self.is_p
         for x in range(b, e):
             k, name, line = t[x]
@@ -777,7 +779,7 @@ class CppWalker:
                     recv = t[x - 2][1]
                 else:
                     recv = "?"
-            elif not name.startswith(("m_", "g_", "s_")):
+            elif not name.startswith(("m_", "g_", "s_")) and not _RE_RESOURCE_ID.match(name):
                 continue
             f.refs.append((name, recv, line, self._ref_mode(x, b, e)))
 
