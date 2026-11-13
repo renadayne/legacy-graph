@@ -1,0 +1,8 @@
+CLegacyDoc::Recalculate  LegacyDoc.cpp:84
+  <- CLegacyDoc::OnToolsRecalc  LegacyDoc.cpp:92  (call at LegacyDoc.cpp:94)
+     <- ID_TOOLS_RECALC [ON_COMMAND]
+        <- Toolbar IDR_MAINFRAME button 4
+        <- Menu IDR_MAINFRAME: Tools > Recalculate
+        <- Accelerator F9
+  <- CLegacyView::OnLButtonDown  LegacyView.cpp:48  (call at LegacyView.cpp:50)
+     <- WM_LBUTTONDOWN [ON_WM_LBUTTONDOWN]
