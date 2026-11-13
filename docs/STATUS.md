@@ -158,3 +158,8 @@
 ## S21b — README v0.3 (doc-writer, reviewed)
 - README (VI): Win32/C sample section with real output, #ifdef selection (--define/--undef/--undef-unknown, .vcxproj tip), new diagnose
   lines, two eval tables, new modules; PowerShell/cmd quoting for Japanese queries. v0.3 plan complete (S15–S21).
+
+## S17-fix — crash on "#ifdef (X)" (reported from the real project)
+- `lexer.filter_conditionals`: macro name taken with a regex (`#ifdef (FOO)`, empty `#ifdef`, comments) instead of split()[0].
+- `index.build_index`: a file whose extraction raises is skipped (partial state rolled back), warning on stderr, `files.failed`
+  counted; diagnose "files skipped because of an internal error: N". Tests in `tests/test_pp.py`.
