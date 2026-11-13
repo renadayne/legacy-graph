@@ -1,0 +1,17 @@
+CLegacyDoc::m_values: 1 write(s), 13 read(s)
+writes:
+  CLegacyDoc::Recalculate  LegacyDoc.cpp:87
+reads:
+  CLegacyDoc::OnNewDocument  LegacyDoc.cpp:26
+  CLegacyDoc::OnNewDocument  LegacyDoc.cpp:28
+  CLegacyDoc::Serialize  LegacyDoc.cpp:36
+  CLegacyDoc::ExportCsv  LegacyDoc.cpp:70
+  CLegacyDoc::ExportCsv  LegacyDoc.cpp:71
+  CLegacyDoc::ExportXml  LegacyDoc.cpp:78
+  CLegacyDoc::ExportXml  LegacyDoc.cpp:79
+  CLegacyDoc::Recalculate  LegacyDoc.cpp:86
+  CLegacyDoc::Recalculate  LegacyDoc.cpp:87
+  CLegacyDoc::Recalculate  LegacyDoc.cpp:89
+  CLegacyDoc::HasData  LegacyDoc.h:19
+  CLegacyView::OnDraw  LegacyView.cpp:41
+  CLegacyView::OnDraw  LegacyView.cpp:43
