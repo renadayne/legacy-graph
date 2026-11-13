@@ -1,0 +1,95 @@
+"""Index format checks (v2 records, v1 compatibility).
+
+Run:  python3 tests/test_index.py
+"""
+import os
+import shutil
+import sys
+import tempfile
+import unicodedata
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, ROOT)
+
+from mfcgraph_core.index import build_index, save_graph, load_graph  # noqa: E402
+from mfcgraph_core.query import q_search  # noqa: E402
+
+SAMPLES = os.path.join(ROOT, "samples", "LegacyApp")
+passed = 0
+failed = 0
+
+
+def check(ok, what, detail=""):
+    global passed, failed
+    if ok:
+        passed += 1
+        return
+    failed += 1
+    print("FAIL: " + what + ("\n  " + str(detail) if detail else ""))
+
+
+def by_qname(g, q):
+    for n in g.nodes:
+        if n.qname == q and "decl" not in n.flags:
+            return n.id
+    return -1
+
+
+def test_v2_roundtrip(g, tmp):
+    path = os.path.join(tmp, "index.mfg")
+    save_graph(g, path)
+    with open(path, encoding="utf-8") as fh:
+        check(fh.readline().startswith("MFCGRAPH\t2\t"), "S2b: header version 2")
+    g2 = load_graph(path)
+    check(g2.texts == g.texts and len(g.texts) > 0, "S2b: texts survive save/load", len(g.texts))
+    check([(f.mtime, f.size) for f in g2.files] == [(f.mtime, f.size) for f in g.files], "S2b: mtime/size kept")
+    check(all(f.size > 0 and f.mtime > 0 for f in g2.files), "S2b: mtime/size recorded")
+    fe = by_qname(g2, "CMainFrame::OnFileExport")
+    check((fe, 69, "Export failed") in g2.texts, "S2b: text attached to function node")
+
+
+def test_refs(g, tmp):
+    def fn(r):
+        return g.nodes[r[0]].qname
+    w = sorted(fn(r) for r in g.refs if r[2] == "CExportDlg::m_strPath" and r[3] == "w")
+    check("CExportDlg::DoDataExchange" in w and "CExportDlg::OnBnClickedBrowse" in w,
+          "S3b: m_strPath written by DDX and OnBnClickedBrowse", w)
+    r = [fn(x) for x in g.refs if x[2] == "CExportDlg::m_strPath" and x[3] == "r"]
+    check("CMainFrame::OnFileExport" in r, "S3b: dlg.m_strPath resolved via local variable type", r)
+    r = [fn(x) for x in g.refs if x[2] == "CLegacyDoc::m_values"]
+    check("CLegacyView::OnDraw" in r, "S3b: pDoc->m_values resolved", r)
+    path = os.path.join(tmp, "refs.mfg")
+    save_graph(g, path)
+    check(load_graph(path).refs == g.refs and g.refs, "S3b: refs survive save/load")
+
+
+def test_search_text(g):
+    out = q_search(g, "export FAILED", 40)
+    check('[text] "Export failed"  CMainFrame::OnFileExport  MainFrm.cpp:69' in out, "S2c: search by text", out)
+    out = q_search(g, unicodedata.normalize("NFD", '"chưa nhập"'), 40)
+    check("CExportDlg::OnOK  ExportDlg.cpp:67" in out, "S2c: Vietnamese text matched after NFC", out)
+
+
+def test_v1_load():
+    g = load_graph(os.path.join(HERE, "data", "legacy_v1.mfg"))
+    check(len(g.nodes) > 100 and g.texts == [], "S2b: v1 index loads (texts empty)")
+    check(all(f.mtime == 0 and f.size == -1 for f in g.files), "S2b: v1 has unknown mtime/size")
+
+
+def main():
+    tmp = tempfile.mkdtemp(prefix="mfcgraph_idx_")
+    try:
+        g = build_index(SAMPLES, 1258)
+        test_v2_roundtrip(g, tmp)
+        test_search_text(g)
+        test_refs(g, tmp)
+        test_v1_load()
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    print("index: %d passed, %d failed" % (passed, failed))
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

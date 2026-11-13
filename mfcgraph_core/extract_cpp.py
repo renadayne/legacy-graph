@@ -5,6 +5,8 @@ stack, recognises function definitions by the "name ( ... ) [qualifiers] {"
 shape and scans bodies for calls. MFC constructs (message maps, DDX,
 RUNTIME_CLASS, IDD, IMPLEMENT_*) are recognised explicitly.
 """
+import re
+
 from .lexer import IDENT, NUMBER, STRING, CHAR, PUNCT, PP
 from .model import RawCall, RawFunc, RawClass, RawMsgEntry, RawMsgMap
 
@@ -78,6 +80,22 @@ def is_all_caps_ident(s):
 
 def _wordch(c):
     return c.isascii() and (c.isalnum() or c == "_")
+
+
+_ESCAPE = re.compile(r"\\(?:x[0-9A-Fa-f]+|[0-7]{1,3}|.)")
+_FORMAT = re.compile(r"%[-+ #0]*(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:hh|h|ll|l|L|z|j|t|I64|I32|I)?[A-Za-z%]")
+STRING_MAX = 200
+_RE_RESOURCE_ID = re.compile(r"^(?:ID|IDD|IDC|IDS|IDR|IDM|IDP|WM|UWM)_[A-Z0-9_]+$")
+WRITE_OPS = frozenset(["=", "+=", "-=", "*=", "/=", "%=", "|=", "&=", "^=", "<<=", ">>=", "++", "--"])
+
+
+def clean_literal(text):
+    """Return the literal text to index, or "" if it has < 3 letters once escapes/format specs are removed."""
+    rest = _FORMAT.sub("", _ESCAPE.sub("", text))
+    if sum(1 for c in rest if c.isalpha()) < 3:
+        return ""
+    text = " ".join(text.split())  # tabs/newlines (raw strings) -> single spaces
+    return text[:STRING_MAX]
 
 
 def join_tokens(t, b, e):
@@ -709,8 +727,66 @@ class CppWalker:
                     and t[x + 3][1] in (";", "=", ",", ")", "[")):
                 loc[t[x + 2][1]] = s
 
+    def scan_strings(self, f, b, e):
+        """Collect string literals as (line, text); adjacent literals are joined."""
+        t = self.t
+        x = b
+        while x < e:
+            if t[x][0] != STRING:
+                x += 1
+                continue
+            line = t[x][2]
+            parts = []
+            while x < e and t[x][0] == STRING:
+                parts.append(t[x][1])
+                x += 1
+            text = clean_literal("".join(parts))
+            if text:
+                f.strings.append((line, text))
+
+    def _ref_mode(self, x, b, e):
+        t = self.t
+        if x - 1 >= b and t[x - 1][0] == PUNCT and t[x - 1][1] in ("++", "--"):
+            return "w"
+        nx = x + 1
+        while nx < e and self.is_p(nx, "["):  # m_arr[i] = v: skip subscripts
+            depth = 0
+            while nx < e:
+                if self.is_p(nx, "["):
+                    depth += 1
+                elif self.is_p(nx, "]"):
+                    depth -= 1
+                    if depth == 0:
+                        break
+                nx += 1
+            nx += 1
+        if nx < e and t[nx][0] == PUNCT and t[nx][1] in WRITE_OPS:
+            return "w"
+        return "r"
+
+    def scan_refs(self, f, b, e):
+        """Record (name, recv, line, mode) for x.name / p->name, for m_/g_/s_ identifiers not called, and for
+        resource/message ids (IDS_x, IDC_x, WM_APP_x ...) used in the body (resolved only if the id is known)."""
+        t, is_p = self.t, self.is_p
+        for x in range(b, e):
+            k, name, line = t[x]
+            if k != IDENT or name in KEYWORDS or is_p(x + 1, "(") or is_p(x + 1, "::"):
+                continue
+            recv = ""
+            after_member = x - 1 >= b and t[x - 1][0] == PUNCT and t[x - 1][1] in (".", "->")
+            if after_member:
+                if x - 2 >= b and t[x - 2][0] == IDENT:
+                    recv = t[x - 2][1]
+                else:
+                    recv = "?"
+            elif not name.startswith(("m_", "g_", "s_")) and not _RE_RESOURCE_ID.match(name):
+                continue
+            f.refs.append((name, recv, line, self._ref_mode(x, b, e)))
+
     def scan_body(self, f, b, e):
         self.scan_locals(f, b, e)
+        self.scan_strings(f, b, e)
+        self.scan_refs(f, b, e)
         t, pm = self.t, self.pm
         is_p, is_id = self.is_p, self.is_id
         for x in range(b, e):

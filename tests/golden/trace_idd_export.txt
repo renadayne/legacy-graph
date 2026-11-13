@@ -1,0 +1,10 @@
+== Dialog IDD_EXPORT caption="Xuất dữ liệu"  LegacyApp.rc:80
+  class: CExportDlg  ExportDlg.h:4
+  controls:
+    IDC_EDIT_PATH  EDITTEXT  <-> DDX_Text m_strPath
+    IDC_BTN_BROWSE  PUSHBUTTON "Chọn..."  -> OnBnClickedBrowse [ON_BN_CLICKED]
+    IDC_CMB_FORMAT  COMBOBOX  <-> DDX_Control m_cmbFormat, DDX_CBIndex m_nFormat  -> OnSelchangeFormat [ON_CBN_SELCHANGE]
+    IDC_CHK_OVERWRITE  CONTROL "Ghi đè nếu đã tồn tại"  <-> DDX_Check m_bOverwrite
+    IDOK  DEFPUSHBUTTON "OK"
+    IDCANCEL  PUSHBUTTON "Hủy"
+  framework entry points: DoDataExchange, OnInitDialog, OnOK

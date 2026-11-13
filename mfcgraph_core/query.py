@@ -1,6 +1,7 @@
 """Read-only queries over the graph. Each returns compact text designed to be
 cheap for an AI agent to read (few tokens, precise locations)."""
 import os
+import unicodedata
 
 from .encoding import decode_with_label
 
@@ -205,6 +206,24 @@ def _pct(a, b):
 
 # ---------------------------------------------------------------- queries
 
+def norm_text(s):
+    """Case-insensitive, NFC-normalised form used to match string literals (Vietnamese safe)."""
+    return unicodedata.normalize("NFC", s).casefold()
+
+
+def text_hits(g, query):
+    """String literals containing query: list of (score, func_node, line, text); exact match scores higher."""
+    q = norm_text(query.strip().strip('"\''))
+    out = []
+    if not q:
+        return out
+    for (fn, line, text) in g.texts:
+        t = norm_text(text)
+        if q in t:
+            out.append((50 if t == q else 35, fn, line, text))
+    return out
+
+
 def q_search(g, query, limit=40):
     hits = []
     ql = query.lower()
@@ -226,11 +245,20 @@ def q_search(g, query, limit=40):
         if n.kind == "external":
             score -= 30
         hits.append((score, n.id))
+    texts = text_hits(g, query)
+    for i, th in enumerate(texts):
+        hits.append((th[0], -1 - i))
     if not hits:
         return "No match for '%s'.\n" % query
     hits.sort(key=lambda h: -h[0])  # stable
     out = ["%d match(es) for '%s'%s:" % (len(hits), query, " (showing top)" if len(hits) > limit else "")]
     for _, nid in hits[:limit]:
+        if nid < 0:
+            _, fn, line, text = texts[-1 - nid]
+            f = g.nodes[fn]
+            path = g.files[f.file].path if 0 <= f.file < len(g.files) else "?"
+            out.append('  [text] "%s"  %s  %s:%d' % (text, f.qname, path, line))
+            continue
         n = g.nodes[nid]
         s = "  [%s] %s" % (n.kind, _label(g, n))
         if n.kind == "id" and n.extra:
@@ -238,6 +266,44 @@ def q_search(g, query, limit=40):
         if n.kind == "id" and n.file >= 0:
             s += "  " + _loc(g, n)
         out.append(s)
+    return "\n".join(out) + "\n"
+
+
+def match_ref_targets(g, query):
+    """Ref targets matching query: exact 'Class::field', '...::field' suffix, or bare field name."""
+    q = query.strip()
+    targets = sorted({r[2] for r in g.refs})
+    for test in (lambda t: t == q, lambda t: t.endswith("::" + q), lambda t: t.lower().endswith(q.lower())
+                 and (len(t) == len(q) or t[-len(q) - 1] == ":")):
+        hit = [t for t in targets if test(t)]
+        if hit:
+            return hit
+    return []
+
+
+def q_refs(g, query, limit=40):
+    targets = match_ref_targets(g, query)
+    if not targets:
+        return "No variable references match '%s'. Try: search %s\n" % (query, query)
+    out = []
+    for t in targets:
+        rows = {"w": [], "r": []}
+        for (fn, line, target, mode) in g.refs:
+            if target != t:
+                continue
+            f = g.nodes[fn]
+            path = g.files[f.file].path if 0 <= f.file < len(g.files) else "?"
+            tag = " [DDX]" if mode == "w" and f.name == "DoDataExchange" else ""
+            rows[mode].append((path, line, "  %s  %s:%d%s" % (f.qname, path, line, tag)))
+        out.append("%s: %d write(s), %d read(s)" % (t, len(rows["w"]), len(rows["r"])))
+        for mode, title in (("w", "writes"), ("r", "reads")):
+            if not rows[mode]:
+                continue
+            out.append(title + ":")
+            lst = sorted(rows[mode])
+            out.extend(x[2] for x in lst[:limit])
+            if len(lst) > limit:
+                out.append("  ... %d more" % (len(lst) - limit))
     return "\n".join(out) + "\n"
 
 
@@ -555,6 +621,10 @@ def q_diagnose(g, show_names=False):
             s("rc.dialogs"), s("rc.menu_items"), s("rc.accelerators"), s("rc.toolbar_buttons"), s("rc.strings")),
         "#include resolved inside the tree: %s of %s (system/MFC headers are expected to be unresolved)" % (
             _pct(s("includes.resolved"), s("includes.total")), s("includes.total")),
+        "string literals indexed: %d" % len(g.texts),
+        "variable references: %s  resolved to a field/global/id %s; stored: writes %d, reads %d" % (
+            s("refs.total"), _pct(s("refs.resolved"), s("refs.total")),
+            sum(1 for r in g.refs if r[3] == "w"), sum(1 for r in g.refs if r[3] != "w")),
         "graph: %s nodes, %s edges" % (s("nodes"), s("edges")),
     ]
     return "\n".join(lines) + "\n"

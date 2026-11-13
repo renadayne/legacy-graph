@@ -1,0 +1,11 @@
+CExportDlg::m_strPath: 3 write(s), 5 read(s)
+writes:
+  CExportDlg::CExportDlg  ExportDlg.cpp:13
+  CExportDlg::DoDataExchange  ExportDlg.cpp:24 [DDX]
+  CExportDlg::OnBnClickedBrowse  ExportDlg.cpp:52
+reads:
+  CExportDlg::DoDataExchange  ExportDlg.cpp:25
+  CExportDlg::OnBnClickedBrowse  ExportDlg.cpp:49
+  CExportDlg::OnOK  ExportDlg.cpp:65
+  CExportDlg::OnOK  ExportDlg.cpp:70
+  CMainFrame::OnFileExport  MainFrm.cpp:67

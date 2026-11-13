@@ -1,0 +1,8 @@
+7 match(es) for 'recalc':
+  [function] CLegacyDoc::Recalculate  LegacyDoc.cpp:84
+  [function] CLegacyDoc::OnToolsRecalc  LegacyDoc.cpp:92
+  [function] CMainFrame::OnRecalcDone  MainFrm.cpp:80
+  [id] ID_TOOLS_RECALC  value=32772; text="Recalculate all values\nRecalculate"  resource.h:13
+  [id] WM_APP_RECALC_DONE  value=(WM_USER + 100)  stdafx.h:13
+  [ui] Menu IDR_MAINFRAME: Tools > Recalculate
+  [text] "Recalculated %d rows"  CMainFrame::OnRecalcDone  MainFrm.cpp:84

@@ -6,12 +6,14 @@ import time
 from . import VERSION
 from .index import build_index, save_graph, load_graph, index_path_for_root, find_index_upwards
 from .query import (q_search, q_node, q_callers, q_callees, q_impact, q_trace, q_msgmap, q_context,
-                    q_diagnose, q_status)
+                    q_diagnose, q_status, q_refs)
 
 USAGE = """mfcgraph %s - offline code graph for C++/MFC (no network, no telemetry)
 
 Usage:
   python mfcgraph.py index <root> [--codepage 1258] [--exclude dir1;dir2] [-v]
+  python mfcgraph.py explore  <question | names | File.cpp:120 | ID | "error text"> [--budget N] [--scope DIR]
+                                                      one call: relevant source + flow + impact (start here)
   python mfcgraph.py search   <text>                 classes, functions, IDs, menu/dialog captions
   python mfcgraph.py node     <symbol> [--no-code]   location, signature, flags, source
   python mfcgraph.py callers  <symbol> [--depth 5]   incl. message map -> menu/accelerator/toolbar
@@ -19,6 +21,7 @@ Usage:
   python mfcgraph.py impact   <symbol> [--depth 5]   what is affected if this changes
   python mfcgraph.py trace    <menu text | ID_xxx | IDD_xxx> [--depth 2]
   python mfcgraph.py msgmap   <Class>
+  python mfcgraph.py refs     <Class::m_field | m_field>   where a member variable is written / read
   python mfcgraph.py context  <symbol> [--lines 80]  Markdown context pack for an AI agent
   python mfcgraph.py diagnose [--show-names]         counts only, safe to share outside
   python mfcgraph.py status
@@ -32,16 +35,16 @@ Common options:
 
 def _parse(argv):
     a = {"pos": [], "root": "", "index": "", "exclude": "", "codepage": 1258, "depth": -1, "lines": 80,
-         "no_code": False, "show_names": False, "verbose": False}
+         "no_code": False, "show_names": False, "verbose": False, "budget": 0, "scope": ""}
     i = 0
     while i < len(argv):
         s = argv[i]
         nxt = argv[i + 1] if i + 1 < len(argv) else ""
-        if s in ("--root", "--index", "--exclude"):
+        if s in ("--root", "--index", "--exclude", "--scope"):
             a[s[2:]] = nxt
             i += 2
             continue
-        if s in ("--codepage", "--depth", "--lines"):
+        if s in ("--codepage", "--depth", "--lines", "--budget"):
             try:
                 a[s[2:]] = int(nxt)
             except ValueError:
@@ -119,11 +122,14 @@ def main(argv=None):
         return 2
     rest = " ".join(a["pos"])
     depth = a["depth"]
-    needs_arg = cmd in ("search", "node", "callers", "callees", "impact", "trace", "msgmap", "context")
+    needs_arg = cmd in ("search", "node", "callers", "callees", "impact", "trace", "msgmap", "context", "refs", "explore")
     if needs_arg and not rest:
         sys.stderr.write("error: missing argument for '%s'\n" % cmd)
         return 1
-    if cmd == "search":
+    if cmd == "explore":
+        from .explore import explore
+        out = explore(g, rest, a["budget"] or None, a["scope"] or None)
+    elif cmd == "search":
         out = q_search(g, rest, 40)
     elif cmd == "node":
         out = q_node(g, rest, not a["no_code"], a["lines"])
@@ -137,6 +143,8 @@ def main(argv=None):
         out = q_trace(g, rest, depth if depth > 0 else 2)
     elif cmd == "msgmap":
         out = q_msgmap(g, rest)
+    elif cmd == "refs":
+        out = q_refs(g, rest)
     elif cmd == "context":
         out = q_context(g, rest, a["lines"])
     elif cmd == "diagnose":

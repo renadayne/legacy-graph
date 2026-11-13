@@ -1,0 +1,4 @@
+Message map of CLegacyApp
+  ON_COMMAND(ID_APP_ABOUT) -> CLegacyApp::OnAppAbout  LegacyApp.cpp:95
+  ON_COMMAND(ID_FILE_NEW) -> CWinApp::OnFileNew  [implemented by MFC base class]
+  ON_COMMAND(ID_FILE_OPEN) -> CWinApp::OnFileOpen  [implemented by MFC base class]

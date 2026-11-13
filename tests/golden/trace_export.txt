@@ -1,0 +1,13 @@
+== ID_FILE_EXPORT  (value=32771; text="Export the document to CSV or XML\nExport")
+  UI: Toolbar IDR_MAINFRAME button 3  LegacyApp.rc:26
+  UI: Menu IDR_MAINFRAME: File > Export...  LegacyApp.rc:37
+  UI: Accelerator Ctrl+E  LegacyApp.rc:65
+  handler [ON_COMMAND]: CMainFrame::OnFileExport  MainFrm.cpp:57
+     -> CLegacyDoc::ExportTo  LegacyDoc.cpp:45
+        -> util::FileExists  Util.cpp:19
+        -> CLegacyDoc::ExportCsv  LegacyDoc.cpp:67
+        -> CLegacyDoc::ExportXml  LegacyDoc.cpp:75
+        -> util::LogMessage  Util.cpp:8
+     -> util::LogMessage  Util.cpp:8  (see above)
+     -> external: AfxMessageBox, CDialog::DoModal, CFrameWnd::GetActiveDocument
+  handler [ON_UPDATE_COMMAND_UI]: CMainFrame::OnUpdateFileExport  MainFrm.cpp:74

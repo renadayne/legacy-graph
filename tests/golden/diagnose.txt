@@ -1,0 +1,15 @@
+mfcgraph diagnose (counts only; no names, no code)
+files: 15  (source 6, header 8, resource 1)
+encodings:  ansi:1258=1  ascii=13  utf16le=1
+files with unbalanced braces: 0
+tokens skipped in inactive #if branches: 72
+classes: 6
+functions: defined 45, declared-only 0, framework entry points 11, message handlers 9
+call sites: 93  exact 23.7%, likely 1.1%, ambiguous 1.1%, external 74.2%
+message-map entries: 13  handler found in code 76.9%, handled by an MFC base class 23.1%, NOT FOUND 0.0%
+unrecognised ON_ macros: 0 uses of 0 kinds  (add --show-names to list them)
+resources: dialogs 2, menu items 10, accelerators 4, toolbar buttons 4, strings 4
+#include resolved inside the tree: 87.5% of 32 (system/MFC headers are expected to be unresolved)
+string literals indexed: 21
+variable references: 57  resolved to a field/global/id 94.7%; stored: writes 13, reads 40
+graph: 170 nodes, 187 edges

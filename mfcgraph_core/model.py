@@ -30,6 +30,8 @@ class RawFunc:
         self.sends = []    # (api, [CAPS...], line)
         self.ddx = []      # (macro, id, member, line)
         self.locals = {}   # variable -> type
+        self.strings = []  # (line, text) string literals in the body (see extract_cpp.scan_strings)
+        self.refs = []     # (name, recv, line, mode) member/global variable refs, mode 'r'|'w' (scan_refs)
 
 
 class RawClass:
@@ -66,15 +68,17 @@ class RawMsgMap:
 
 
 class SrcFile:
-    __slots__ = ("path", "encoding", "hash", "lines", "brace_error", "skipped_tokens")
+    __slots__ = ("path", "encoding", "hash", "lines", "brace_error", "skipped_tokens", "mtime", "size")
 
-    def __init__(self, path="", encoding="", hash_="", lines=0, brace_error=False, skipped=0):
+    def __init__(self, path="", encoding="", hash_="", lines=0, brace_error=False, skipped=0, mtime=0, size=-1):
         self.path = path
         self.encoding = encoding
         self.hash = hash_
         self.lines = lines
         self.brace_error = brace_error
         self.skipped_tokens = skipped
+        self.mtime = mtime   # int seconds at index time (0 = unknown, e.g. v1 index)
+        self.size = size     # bytes at index time (-1 = unknown)
 
 
 class RawData:
@@ -131,6 +135,8 @@ class Graph:
         self.nodes = []
         self.edges = []
         self.stats = {}
+        self.texts = []   # (func_node, line, text): string literals in function bodies (index v2)
+        self.refs = []    # (func_node, line, "Class::field" | "g_name" | "ID_X", mode 'r'|'w'); DDX counts as 'w'
         self.out = []
         self.inn = []
 

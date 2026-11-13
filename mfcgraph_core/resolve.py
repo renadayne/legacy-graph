@@ -70,6 +70,7 @@ class Resolver:
         self.handlers_total = self.handlers_resolved = self.handlers_framework = 0
         self.includes_total = self.includes_resolved = 0
         self._anc_cache = {}
+        self.refs_total = self.refs_resolved = 0
 
     def run(self):
         self.g.files = self.r.files
@@ -539,6 +540,55 @@ class Resolver:
             if f.ddx and owner >= 0:
                 for (macro, did, member, line) in f.ddx:
                     self.add_edge(owner, self.id_node(did), "binds", f.file, line, "exact", macro + " " + member)
+            for (line, text) in f.strings:
+                self.g.texts.append((src, line, text))
+            self.make_refs(src, f, owner)
+
+    def field_owner(self, cls, name):
+        """Class id (cls or an ancestor) that declares field name, or -1."""
+        if cls < 0:
+            return -1
+        for c in [cls] + self.ancestors(cls)[0]:
+            fm = self.fields.get(c)
+            if fm and name in fm:
+                return c
+        return -1
+
+    def make_refs(self, src, f, owner):
+        nodes = self.g.nodes
+        ddx = {}
+        for (macro, did, member, line) in f.ddx:
+            ddx[(member, line)] = True
+        seen = set()
+        out = []
+        for (name, recv, line, mode) in f.refs:
+            self.refs_total += 1
+            if (name, line) in ddx:
+                mode = "w"
+            if not recv or recv == "this":
+                c = self.field_owner(owner, name)
+            elif recv == "?":
+                c = -1
+            else:
+                c = self.field_owner(self.receiver_class(f, owner, recv), name)
+            if c >= 0:
+                target = nodes[c].qname + "::" + name
+            elif not recv and name.startswith(("g_", "s_")):
+                target = name
+            elif not recv and name in self.ids and not name.startswith(("m_", "g_", "s_")):
+                target = name  # resource / message id used in the body (e.g. AfxMessageBox(IDS_X))
+            else:
+                continue
+            self.refs_resolved += 1
+            key = (line, target, mode)
+            if key not in seen:
+                seen.add(key)
+                out.append((src, line, target, mode))
+        for (macro, did, member, line) in f.ddx:
+            c = self.field_owner(owner, member)
+            if c >= 0 and (line, nodes[c].qname + "::" + member, "w") not in seen:
+                out.append((src, line, nodes[c].qname + "::" + member, "w"))
+        self.g.refs.extend(out)
 
     def make_includes(self):
         by_base = {}
@@ -631,6 +681,10 @@ class Resolver:
         s["rc.strings"] = str(len(self.r.strings))
         s["includes.total"] = str(self.includes_total)
         s["includes.resolved"] = str(self.includes_resolved)
+        s["refs.total"] = str(self.refs_total)
+        s["refs.resolved"] = str(self.refs_resolved)
+        s["refs.writes"] = str(sum(1 for r in self.g.refs if r[3] == "w"))
+        s["texts"] = str(len(self.g.texts))
         s["nodes"] = str(len(self.g.nodes))
         s["edges"] = str(len(self.g.edges))
 

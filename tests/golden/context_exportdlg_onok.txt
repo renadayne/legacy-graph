@@ -1,0 +1,27 @@
+# Context: CExportDlg::OnOK
+
+## Definition (ExportDlg.cpp:62-73)
+flags: framework-entry
+```cpp
+62 | void CExportDlg::OnOK()
+63 | {
+64 | 	UpdateData(TRUE);
+65 | 	if (m_strPath.IsEmpty())
+66 | 	{
+67 | 		AfxMessageBox(_T("Chưa nhập đường dẫn"));   // thông báo lỗi
+68 | 		return;
+69 | 	}
+70 | 	if (!util::IsValidPath(m_strPath))
+71 | 		return;
+72 | 	CDialog::OnOK();
+73 | }
+```
+
+## Called by
+- (none in indexed code; MFC framework calls it)
+
+## Calls
+- util::IsValidPath  Util.cpp:24  `BOOL IsValidPath(const CString &path)`
+- external: AfxMessageBox, CDialog::OnOK, CDialog::UpdateData, CString::IsEmpty
+
+Overrides CDialog::OnOK

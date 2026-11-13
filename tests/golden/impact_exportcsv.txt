@@ -1,0 +1,9 @@
+Impact of changing CLegacyDoc::ExportCsv  LegacyDoc.cpp:67  (reverse depth <= 5)
+functions affected (2):
+  1  CLegacyDoc::ExportTo  LegacyDoc.cpp:45
+  2  CMainFrame::OnFileExport  MainFrm.cpp:57
+UI entry points (3):
+  Toolbar IDR_MAINFRAME button 3
+  Menu IDR_MAINFRAME: File > Export...
+  Accelerator Ctrl+E
+files (2): LegacyDoc.cpp, MainFrm.cpp

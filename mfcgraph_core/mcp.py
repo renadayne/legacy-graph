@@ -4,12 +4,14 @@ No sockets, no network: the IDE starts this process and talks through
 stdin/stdout. Only runs when the user starts `mfcgraph serve`.
 """
 import json
+import os
 import sys
 
 from . import VERSION
 from .index import load_graph
 from .query import (q_search, q_node, q_callers, q_callees, q_impact, q_trace, q_msgmap, q_context,
-                    q_status)
+                    q_status, q_refs)
+from .explore import explore
 
 MAX_TOOL_OUTPUT = 16000  # characters; keeps agent context small
 
@@ -25,7 +27,21 @@ _S = {"type": "string"}
 _I = {"type": "integer"}
 _B = {"type": "boolean"}
 
+EXPLORE_DESC = (
+    "Find the code for a question in ONE call. Returns verbatim line-numbered source of the most relevant "
+    "functions (treat it as already read), the call flow between them including MFC hops (menu/accelerator -> "
+    "command ID -> message-map handler, PostMessage -> ON_MESSAGE handler), blast radius, and names not shown. "
+    "query can be: a bug description in English or Vietnamese; a function/class name; Class::Method; "
+    "File.cpp:120 or File.cpp:100-140; a module directory (Billing/); a menu or button caption; an ID "
+    "(ID_FILE_EXPORT, IDD_xxx, IDC_xxx, IDS_xxx, WM_APP_xxx); or the exact text of an error message.")
+
 TOOLS = [
+    ("mfc_explore", EXPLORE_DESC,
+     _obj({"query": dict(_S, description="Question, names, File.cpp:line, ID or error message text"),
+           "budget": dict(_I, description="Max characters of the answer (default by project size)"),
+           "scope": dict(_S, description="Optional directory to focus on, e.g. Billing")}, ["query"])),
+    ("mfc_refs", "Where a member variable is written (first) and read: Class::m_field or m_field.",
+     _obj({"field": _S}, ["field"])),
     ("mfc_search", "Find classes, functions, command/resource IDs, menu captions and dialog captions by (part of) "
                    "name. Use this first when you only know a word.",
      _obj({"query": _S, "limit": _I}, ["query"])),
@@ -50,9 +66,31 @@ TOOLS = [
     ("mfc_status", "Index status: root, creation time, counts.", _obj({})),
 ]
 
-INSTRUCTIONS = ("Offline code graph of a C++/MFC codebase. Start with mfc_search or mfc_trace (menu caption / "
-                "command ID / dialog ID), then mfc_context for the symbol you need. Prefer these tools over "
-                "reading whole files.")
+INSTRUCTIONS = (
+    "Offline code map of a legacy C++/MFC codebase. Call mfc_explore FIRST for any bug, question or before an "
+    "edit, before opening files; one call usually answers. Treat the source it returns as already read: do not "
+    "re-open or grep those lines. If you need more, call mfc_explore again with more specific names (a function "
+    "from 'Not shown', Class::Method, File.cpp:a-b from an elision marker). Do not rebuild call flows by hand: "
+    "name both ends and let the tool find the path. Functions flagged msg-handler, update-ui-handler or "
+    "framework-entry are called by MFC (message map / virtual override), not by other code.")
+
+DEFAULT_TOOLS = "explore"
+ENV_TOOLS = "MFCGRAPH_MCP_TOOLS"
+
+
+def enabled_tools(env=None):
+    """Tool names exposed: env MFCGRAPH_MCP_TOOLS="explore,trace,callers" (mfc_ prefix optional; "all")."""
+    env = os.environ if env is None else env
+    raw = env.get(ENV_TOOLS, "") or DEFAULT_TOOLS
+    names = {"mfc_" + x.strip().lower().replace("mfc_", "", 1) for x in raw.split(",") if x.strip()}
+    if "mfc_all" in names:
+        return [t[0] for t in TOOLS]
+    return [t[0] for t in TOOLS if t[0] in names]
+
+
+def tool_list(env=None):
+    on = set(enabled_tools(env))
+    return [{"name": n, "description": d, "inputSchema": sc} for n, d, sc in TOOLS if n in on]
 
 
 def _int(a, k, d):
@@ -63,7 +101,14 @@ def _int(a, k, d):
         return d
 
 
-def _run_tool(g, index_path, name, a):
+def _run_tool(g, index_path, name, a, enabled=None):
+    if enabled is not None and name not in enabled:
+        return "tool not enabled: %s (set %s)" % (name, ENV_TOOLS), True
+    if name == "mfc_explore":
+        b = _int(a, "budget", 0)
+        return explore(g, str(a.get("query", "")), b if b > 0 else None, str(a.get("scope", "")) or None), False
+    if name == "mfc_refs":
+        return q_refs(g, str(a.get("field", ""))), False
     if name == "mfc_search":
         return q_search(g, str(a.get("query", "")), _int(a, "limit", 30)), False
     if name == "mfc_node":
@@ -91,8 +136,10 @@ def _clamp(s):
     return s[:MAX_TOOL_OUTPUT] + "\n... (output truncated; narrow the query)\n"
 
 
-def run_mcp_server(index_path):
-    out = sys.stdout.buffer
+def run_mcp_server(index_path, stdin=None, stdout=None):
+    out = stdout if stdout is not None else sys.stdout.buffer
+    inp = stdin if stdin is not None else sys.stdin.buffer
+    enabled = set(enabled_tools())
 
     def send(obj):
         out.write(json.dumps(obj, ensure_ascii=False).encode("utf-8") + b"\n")
@@ -106,7 +153,7 @@ def run_mcp_server(index_path):
         err = str(ex)
         sys.stderr.write("mfcgraph: %s\n" % err)  # stderr is shown in the IDE's MCP log
 
-    for raw in sys.stdin.buffer:
+    for raw in inp:
         line = raw.decode("utf-8", "replace").strip()
         if not line:
             continue
@@ -130,7 +177,7 @@ def run_mcp_server(index_path):
         elif method == "ping":
             result = {}
         elif method == "tools/list":
-            result = {"tools": [{"name": n, "description": d, "inputSchema": s} for n, d, s in TOOLS]}
+            result = {"tools": tool_list()}
         elif method == "tools/call":
             name = params.get("name", "")
             args = params.get("arguments") or {}
@@ -138,7 +185,7 @@ def run_mcp_server(index_path):
                 text, is_error = "Index not available: " + err, True
             else:
                 try:
-                    text, is_error = _run_tool(g, index_path, name, args)
+                    text, is_error = _run_tool(g, index_path, name, args, enabled)
                 except Exception as ex:  # never crash the server on one bad query
                     text, is_error = "internal error: %s" % ex, True
             result = {"content": [{"type": "text", "text": _clamp(text)}], "isError": is_error}
