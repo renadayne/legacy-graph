@@ -17,7 +17,8 @@ Allocation (why):
     at most MAX_FILE_FRAC (70%) unless pinned; unused share flows to the next file.
   * Inside a file: exact functions first and in full (windows only if one alone exceeds the share), then by score:
     full body if it fits, else windows around focus lines (anchor, matched literal, refs, calls to other chosen
-    functions), else signature. Low-score functions off the spine get the signature only.
+    functions), else signature. Low-score functions off the spine get full code only if it fits the remaining
+    share (they are processed last), otherwise the signature only — never a window.
 """
 from .explore_windows import windows_for, render, signature_only
 
@@ -123,7 +124,7 @@ def plan_function(g, lines, fi, node, score, avail, exact, low, sr, chosen_set):
     span = (n.line, n.end)
     full = [span]
     full_cost = _cost(g, lines, fi, full)
-    if not low and full_cost <= avail:
+    if full_cost <= avail:  # low-score functions too: spare budget is better spent on code than left unused
         return FuncPlan(node, score, FULL, full), full_cost
     if not low:
         focus = focus_lines(g, node, sr, chosen_set)

@@ -16,7 +16,7 @@ Interface:
 Weights (tuned in S9; every number is a general principle, not a fit to one sample):
     anchor 10 (exact) · qualified 8 (exact) · ident 6 (<= 5 definitions; more -> 30 split evenly)
     id 5 (handlers via handled_by, senders, functions using the id) · quoted 5 (literal or UI caption)
-    word 1 per match (name segment / caption / literal), at most WORD_CAP per node.
+    word 1 per match (name segment / caption / literal / segment of a handled id name), at most WORD_CAP per node.
 A word equal to a directory name of the tree (e.g. "billing") adds that directory to scope_dirs:
 developers name the module they suspect.
 Captions (menu items, dialog captions, button texts, string table) that appear verbatim inside the query text
@@ -348,6 +348,12 @@ class _Seeder:
             if re.search(r"(?<!\w)" + re.escape(w), norm(text)):
                 self.add_word(fn, "word %s in literal" % w, line)
                 hit = True
+        for name, idn in sorted(self.ids.items()):
+            # IDC_LIST_LINES / ID_INVOICE_RECALC: the id name describes the control or command
+            if _word_hits_segment(w, name.lower().split("_")[1:]):
+                for fn in self.handlers_of_id(idn):
+                    self.add_word(fn, "word %s in id %s" % (w, name))
+                    hit = True
         for cap in self.caption_targets():
             if re.search(r"(?<!\w)" + re.escape(w) + r"(?!\w)", cap[0]):
                 for fn in self.handlers_of_id(cap[2]):
