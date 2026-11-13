@@ -16,7 +16,8 @@ Interface:
 Weights (tuned in S9; every number is a general principle, not a fit to one sample):
     anchor 10 (exact) · qualified 8 (exact) · ident 6 (<= 5 definitions; more -> 30 split evenly)
     id 5 (handlers via handled_by, senders, functions using the id) · quoted 5 (literal or UI caption)
-    word 1 per match (name segment / caption / literal / segment of a handled id name), at most WORD_CAP per node.
+    word 1 per match (name segment / caption / literal / segment of a handled id name), at most WORD_CAP per node;
+         a word hitting more than WORD_MAX_HITS nodes is scaled by WORD_MAX_HITS / hits.
 A word equal to a directory name of the tree (e.g. "billing") adds that directory to scope_dirs:
 developers name the module they suspect.
 Captions (menu items, dialog captions, button texts, string table) that appear verbatim inside the query text
@@ -37,6 +38,7 @@ W_ID = 5.0
 W_QUOTED = 5.0
 W_WORD = 1.0
 WORD_CAP = 3.0
+WORD_MAX_HITS = 40    # a word matching more nodes than this has its weight spread over them
 W_REF_WRITE = 5.0     # function writing a named field
 W_REF_READ = 2.0      # function reading a named field
 MIN_CAPTION = 4       # shortest caption matched inside free query text
@@ -122,12 +124,12 @@ class _Seeder:
         if line:
             self.focus.setdefault(node, set()).add(line)
 
-    def add_word(self, node, reason, line=None):
+    def add_word(self, node, reason, line=None, scale=1.0):
         got = self.word_score.get(node, 0.0)
-        if got >= WORD_CAP:
+        if got >= WORD_CAP * scale:
             return
-        self.word_score[node] = got + W_WORD
-        self.add(node, W_WORD, reason, line)
+        self.word_score[node] = got + W_WORD * scale
+        self.add(node, W_WORD * scale, reason, line)
 
     # ---- files ----
     def files_matching(self, path):
@@ -328,6 +330,24 @@ class _Seeder:
                 done.add((c, cap[2]))
                 self.seed_caption(cap, W_QUOTED, "caption")
 
+    def word_index(self):
+        """Cached on the graph: {segment: [node]} for function/class names, and NFC-casefolded literals."""
+        g = self.g
+        cached = getattr(g, "_explore_words", None)
+        if cached is not None:
+            return cached
+        seg_nodes = {}
+        for n in g.nodes:
+            if n.kind not in ("function", "class") or "decl" in n.flags.split(","):
+                continue
+            if n.kind == "function" and n.owner >= 0 and n.name.lstrip("~") == g.nodes[n.owner].name:
+                continue  # ctor/dtor names only repeat the class name; the class node gets the match
+            for sg in set(segments(n.name)):
+                seg_nodes.setdefault(sg, []).append(n.id)
+        texts = [(fn, line, norm(text)) for (fn, line, text) in g.texts]
+        g._explore_words = (seg_nodes, sorted(seg_nodes), texts)
+        return g._explore_words
+
     def t_word(self, t):
         w = t.value
         hit = False
@@ -336,30 +356,31 @@ class _Seeder:
                 if d not in self.scope:
                     self.scope.append(d)
             hit = True
-        g = self.g
-        for n in g.nodes:
-            if n.kind in ("function", "class") and "decl" not in n.flags.split(","):
-                if n.kind == "function" and n.owner >= 0 and n.name.lstrip("~") == g.nodes[n.owner].name:
-                    continue  # ctor/dtor names only repeat the class name; the class node gets the match
-                if _word_hits_segment(w, segments(n.name)):
-                    self.add_word(n.id, "word " + w)
-                    hit = True
-        for (fn, line, text) in g.texts:
-            if re.search(r"(?<!\w)" + re.escape(w), norm(text)):
-                self.add_word(fn, "word %s in literal" % w, line)
-                hit = True
+        seg_nodes, segs, texts = self.word_index()
+        found = []  # (node, reason, line)
+        for sg in segs:
+            if _word_hits_segment(w, (sg,)):
+                found.extend((x, "word " + w, None) for x in seg_nodes[sg])
+        rx = re.compile(r"(?<!\w)" + re.escape(w))
+        for (fn, line, text) in texts:
+            if w in text and rx.search(text):
+                found.append((fn, "word %s in literal" % w, line))
         for name, idn in sorted(self.ids.items()):
             # IDC_LIST_LINES / ID_INVOICE_RECALC: the id name describes the control or command
             if _word_hits_segment(w, name.lower().split("_")[1:]):
-                for fn in self.handlers_of_id(idn):
-                    self.add_word(fn, "word %s in id %s" % (w, name))
-                    hit = True
+                found.extend((fn, "word %s in id %s" % (w, name), None) for fn in self.handlers_of_id(idn))
+        rx = re.compile(r"(?<!\w)" + re.escape(w) + r"(?!\w)")
         for cap in self.caption_targets():
-            if re.search(r"(?<!\w)" + re.escape(w) + r"(?!\w)", cap[0]):
-                for fn in self.handlers_of_id(cap[2]):
-                    self.add_word(fn, "word %s in caption" % w)
-                    hit = True
-        return hit
+            if w in cap[0] and rx.search(cap[0]):
+                found.extend((fn, "word %s in caption" % w, None) for fn in self.handlers_of_id(cap[2]))
+        if not found:
+            return hit
+        # a word matching very many places says little about any one of them: spread its weight (like ident)
+        distinct = len({x[0] for x in found})
+        scale = min(1.0, WORD_MAX_HITS / float(distinct))
+        for node, reason, line in found:
+            self.add_word(node, reason, line, scale)
+        return True
 
     # ---- helpers ----
     def in_scope(self, node):

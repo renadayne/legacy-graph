@@ -95,3 +95,9 @@
 
 ## S11 — diagnose additions
 - `diagnose` adds "string literals indexed: N" and "variable references: T  resolved …%; stored: writes W, reads R" (counts only).
+
+## S13 — performance on a large tree
+- `tests/tools/make_big_tree.py <out> [--files 20000] [--bench]`: clones BigApp (classes renamed per copy), benchmarks index/explore.
+- 20,022 files: index 13.2 s, load 1.4 s, index 26 MB, peak RAM 437 MB (< 1.5 GB: no SQLite needed for v0.2).
+- explore was up to 2.5 s → fixed: cached segment→node word index, word weight spread over > 40 hits, PPR on top 120 seeds with
+  precomputed transitions. Now 0.3–1.3 s per query (first call includes cache build). BigApp recall unchanged (1.000).
