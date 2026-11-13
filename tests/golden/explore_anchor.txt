@@ -1,0 +1,60 @@
+mfc_explore: 3 functions in 3 files (budget 3000, used 1634). Scope: (all)
+
+## Flow
+Toolbar IDR_MAINFRAME button 3
+  -> ID_FILE_EXPORT [ON_COMMAND] -> CMainFrame::OnFileExport  MainFrm.cpp:57
+
+## Source
+### MainFrm.cpp — CMainFrame::OnFileExport (msg-handler)
+57	void CMainFrame::OnFileExport()
+58	{
+59		CExportDlg dlg(this);
+60		if (dlg.DoModal() != IDOK)
+61			return;
+62	
+63		CLegacyDoc* pDoc = (CLegacyDoc*)GetActiveDocument();
+64		if (pDoc == NULL)
+65			return;
+66	
+67		if (!pDoc->ExportTo(dlg.m_strPath, dlg.m_nFormat, dlg.m_bOverwrite))
+68		{
+69			AfxMessageBox(_T("Export failed"));
+70			util::LogMessage(_T("Export failed"));
+71		}
+72	}
+### Util.cpp — util::LogMessage
+8	void LogMessage(const CString& msg)
+9	{
+10		CStdioFile f;
+11		if (f.Open(_T("legacy.log"), CFile::modeCreate | CFile::modeNoTruncate | CFile::modeWrite))
+12		{
+13			f.SeekToEnd();
+14			f.WriteString(msg + _T("\n"));
+15		}
+16		TRACE(_T("%s\n"), (LPCTSTR)msg);
+17	}
+### LegacyDoc.cpp — CLegacyDoc::ExportTo
+45	BOOL CLegacyDoc::ExportTo(const CString& strPath, int nFormat, BOOL bOverwrite)
+46	{
+47		if (!bOverwrite && util::FileExists(strPath))
+48			return FALSE;
+49	
+50		BOOL bOk = FALSE;
+51		switch (nFormat)
+52		{
+53		case 0:
+54			bOk = ExportCsv(strPath);
+55			break;
+56		case 1:
+57			bOk = ExportXml(strPath);
+58			break;
+59		default:
+60			ASSERT(FALSE);
+61		}
+62		if (bOk)
+63			util::LogMessage(_T("Export done: ") + strPath);
+64		return bOk;
+65	}
+
+## Blast radius
+CMainFrame::OnFileExport ← 0 callers, called by MFC via ID_FILE_EXPORT [ON_COMMAND]; UI entries: Toolbar IDR_MAINFRAME button 3, Menu IDR_MAINFRAME: File > Export..., Accelerator Ctrl+E
