@@ -92,3 +92,6 @@
 ## S10 — changed-file warning
 - explore compares size/mtime of files it would print with the index (`explore_render.changed_files`); changed files: banner
   `⚠ Changed since last index: …; re-run index (code of these files not shown)` and their functions go to Not shown. v1 index: no check.
+
+## S11 — diagnose additions
+- `diagnose` adds "string literals indexed: N" and "variable references: T  resolved …%; stored: writes W, reads R" (counts only).

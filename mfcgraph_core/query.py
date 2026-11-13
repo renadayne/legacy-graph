@@ -621,6 +621,10 @@ def q_diagnose(g, show_names=False):
             s("rc.dialogs"), s("rc.menu_items"), s("rc.accelerators"), s("rc.toolbar_buttons"), s("rc.strings")),
         "#include resolved inside the tree: %s of %s (system/MFC headers are expected to be unresolved)" % (
             _pct(s("includes.resolved"), s("includes.total")), s("includes.total")),
+        "string literals indexed: %d" % len(g.texts),
+        "variable references: %s  resolved to a field/global/id %s; stored: writes %d, reads %d" % (
+            s("refs.total"), _pct(s("refs.resolved"), s("refs.total")),
+            sum(1 for r in g.refs if r[3] == "w"), sum(1 for r in g.refs if r[3] != "w")),
         "graph: %s nodes, %s edges" % (s("nodes"), s("edges")),
     ]
     return "\n".join(lines) + "\n"
