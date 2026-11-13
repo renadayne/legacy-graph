@@ -339,6 +339,8 @@ class _Seeder:
         g = self.g
         for n in g.nodes:
             if n.kind in ("function", "class") and "decl" not in n.flags.split(","):
+                if n.kind == "function" and n.owner >= 0 and n.name.lstrip("~") == g.nodes[n.owner].name:
+                    continue  # ctor/dtor names only repeat the class name; the class node gets the match
                 if _word_hits_segment(w, segments(n.name)):
                     self.add_word(n.id, "word " + w)
                     hit = True
