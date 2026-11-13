@@ -154,3 +154,7 @@
 
 ## S21a — diagnose, CHANGELOG, version 0.3.0
 - `diagnose` files line shows C files (`source N of which C M`); #if and win32 lines added in S17/S18/S19. VERSION 0.3.0, CHANGELOG 0.3.0.
+
+## S21b — README v0.3 (doc-writer, reviewed)
+- README (VI): Win32/C sample section with real output, #ifdef selection (--define/--undef/--undef-unknown, .vcxproj tip), new diagnose
+  lines, two eval tables, new modules; PowerShell/cmd quoting for Japanese queries. v0.3 plan complete (S15–S21).

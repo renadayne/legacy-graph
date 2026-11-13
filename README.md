@@ -1,8 +1,10 @@
-# mfcgraph 0.2 (bản Python)
+# mfcgraph 0.3 (bản Python)
 
 Công cụ dựng **đồ thị mã nguồn** cho codebase C++/MFC lâu năm, chạy **hoàn toàn offline**. Mục đích là giúp AI agent (GitHub Copilot) hỏi đúng chỗ thay vì đọc cả chục file, nhờ đó tốn ít token và credit hơn.
 
 v0.2 thêm một lệnh/tool chính: `explore` (`mfc_explore`). Từ một câu hỏi, tên hàm, ID hoặc thông báo lỗi, `explore` trả về mã nguồn liên quan, luồng gọi và phạm vi ảnh hưởng trong một lần gọi.
+
+v0.3 hỗ trợ codebase trộn MFC, Win32 API và file C. Công cụ nhận ra window/dialog procedure dùng `switch/case`, `HANDLE_MSG`, `DialogBox` và các hàm callback truyền cho Windows. File `.c` được đọc theo cú pháp C: các từ khóa chỉ có trong C++ như `new`, `class`, `this` là tên thường. Với `#ifdef/#else`, công cụ chọn nhánh theo macro bạn khai báo.
 
 - **Chỉ cần Python 3.7 trở lên**, đã có sẵn trên máy. **Chỉ dùng thư viện chuẩn của Python**: không `pip install`, không thư viện ngoài, không kết nối internet.
 - **Không cần build**, không có file `.exe` nào để ký số. Chạy thẳng `python mfcgraph.py ...`.
@@ -23,7 +25,7 @@ Công cụ hiểu được những chỗ mà công cụ thông thường bỏ s�
 | --- | --- |
 | Không có code mạng | `findstr /s /i "socket urllib http requests ftplib smtplib subprocess ctypes pickle" mfcgraph_core\*.py` chỉ ra đúng một dòng comment trong `mcp.py` |
 | Chỉ dùng thư viện chuẩn | Toàn bộ lệnh `import` nằm đầu mỗi file: `os`, `sys`, `re`, `json`, `time`, `hashlib`, `unicodedata`, `difflib`, `collections` và các module nội bộ `mfcgraph_core`. Các module `explore*.py` cũng chỉ import thư viện chuẩn |
-| Không telemetry, không tự cập nhật | Toàn bộ mã nguồn khoảng 4.800 dòng Python (kể cả comment) trong `mfcgraph_core/`, đọc hết được |
+| Không telemetry, không tự cập nhật | Toàn bộ mã nguồn khoảng 5.700 dòng Python (kể cả comment) trong `mfcgraph_core/`, đọc hết được |
 | Cái chạy chính là cái đọc | Không có bước build. File `.py` SA review là file chạy |
 | MCP không mở cổng | MCP (tùy chọn) giao tiếp qua stdin/stdout; code MCP chỉ được nạp khi gọi lệnh `serve` |
 | Không sửa cấu hình máy | Không ghi vào config của IDE/Copilot |
@@ -54,10 +56,12 @@ cd mfcgraph-py
 python tests\run_all.py
 ```
 
-Kết quả mong đợi: dòng cuối là `ALL: OK`. Lệnh này chạy mọi bộ kiểm thử, kể cả đánh giá của `explore`. Dòng đánh giá đó có dạng:
+Kết quả mong đợi: dòng cuối là `ALL: OK`. Lệnh này chạy mọi bộ kiểm thử, kể cả đánh giá của `explore`. Đánh giá in hai bảng: bảng đầu cho BigApp (14 kịch bản), bảng sau cho Win32App (13 kịch bản). Mỗi bảng có một dòng tổng:
 
 ```
 mean recall 1.000 (target 0.90); within budget 14/14
+mean recall 1.000 (target 0.90); within budget 13/13
+ALL: OK
 ```
 
 ## 4. Chạy thử với dự án mẫu
@@ -205,6 +209,103 @@ python mfcgraph.py context CExportDlg::OnOK --root samples\LegacyApp
 python mfcgraph.py diagnose --root samples\LegacyApp
 ```
 
+### Dự án Win32 / C (mẫu samples/Win32App)
+
+`samples/Win32App` là dự án Win32 + C **giả** (không có code công ty): window procedure, dialog procedure, file `.c`, file Shift-JIS và resource tiếng Nhật.
+
+```bat
+python mfcgraph.py index samples/Win32App --codepage 932 --undef-unknown
+```
+
+```
+Indexed 26 files in 0.01 s -> .../samples/Win32App/.mfcgraph/index.mfg
+  classes 5, functions 33, message-map entries 2, dialogs 3, menu items 6
+Run 'mfcgraph diagnose' for quality numbers.
+```
+
+`--codepage 932` dùng cho file Shift-JIS. Mặc định là 1258 sẽ làm hỏng chữ tiếng Nhật. `--undef-unknown` xem trong mục "Chọn nhánh #ifdef/#else" bên dưới (mục 5).
+
+```bat
+python mfcgraph.py explore "IDM_FILE_EXPORT" --root samples/Win32App
+```
+
+```
+mfc_explore: 3 functions in 2 files (budget 8000, used 3284). Scope: (all)
+
+## Flow
+Menu IDR_MAINMENU: ファイル(F) > エクスポート(E)...
+  -> MainWndProc  MainWnd.cpp:21
+  -> ExportDlgProc  ExportDlg.cpp:38
+
+## Source
+### MainWnd.cpp — MainWndProc (win32-proc)
+...
+### ExportDlg.cpp — Export_OnCommand (msg-handler), ExportDlgProc (win32-proc)
+14	static void Export_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
+15	{
+16	    TCHAR szPath[MAX_PATH];
+17	    DOCUMENT* pDoc = g_pExportDoc;
+18	
+19	    GetDlgItemText(hwnd, IDC_EDIT_PATH, szPath, MAX_PATH);
+20	    switch (id) {
+21	    case IDC_BTN_BROWSE:
+22	        BrowseForFile(hwnd, szPath, MAX_PATH);
+23	        SetDlgItemText(hwnd, IDC_EDIT_PATH, szPath);
+24	        break;
+25	    case IDOK:
+26	        if (!ExportCsv(pDoc, szPath))
+27	            MessageBox(hwnd, _T("エクスポートに失敗しました"), NULL, MB_ICONERROR);
+28	        else
+29	            SetStatusText(_T("Export done"));
+30	        EndDialog(hwnd, IDOK);
+31	        break;
+32	    case IDCANCEL:
+33	        EndDialog(hwnd, IDCANCEL);
+34	        break;
+35	    }
+36	}
+… line 37 elided — mfc_explore "ExportDlg.cpp:37" returns it
+38	INT_PTR CALLBACK ExportDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
+39	{
+40	    switch (msg) {
+41	        HANDLE_MSG(hDlg, WM_INITDIALOG, Export_OnInitDialog);
+42	        HANDLE_MSG(hDlg, WM_COMMAND, Export_OnCommand);
+43	    }
+44	    return FALSE;
+45	}
+
+## Blast radius
+MainWndProc ← 0 callers, called by the framework via WM_CREATE [case], WM_COMMAND [case], WM_TIMER [case]; UI entries: Menu IDR_MAINMENU: ファイル(F) > エクスポート(E)...
+ExportDlgProc ← 0 callers; UI entries: Menu IDR_MAINMENU: ファイル(F) > エクスポート(E)...
+```
+
+Ý nghĩa:
+
+- **Flow** đi từ menu tới window procedure (`MainWndProc`), rồi tới dialog procedure (`ExportDlgProc`). Dòng `case IDM_FILE_EXPORT:` nằm ở `MainWnd.cpp:36`, trong mục **Source**.
+- Cờ `win32-proc` (trong **Source**) nghĩa là hàm do Windows gọi.
+
+Thông báo lỗi tiếng Nhật phải đặt trong dấu ngoặc kép. Tiếng Nhật không có khoảng trắng giữa các từ, nên câu không có dấu ngoặc kép sẽ không khớp với gì.
+
+PowerShell (nháy đơn bên ngoài, ngoặc kép bên trong):
+
+```powershell
+python mfcgraph.py explore '"エクスポートに失敗しました"' --root samples\Win32App
+```
+
+cmd: ngoặc kép bên trong viết là `\"`:
+
+```bat
+python mfcgraph.py explore "\"エクスポートに失敗しました\"" --root samples\Win32App
+```
+
+```
+## Flow
+IDD_EXPORT control PUSHBUTTON "参照..." / IDD_EXPORT control DEFPUSHBUTTON "OK" / IDD_EXPORT control PUSHBUTTON "Cancel"
+  -> Export_OnCommand  ExportDlg.cpp:14
+  -> ExportCsv  Export.c:4
+Text "エクスポートに失敗しました": ExportDlg.cpp:27 (in Export_OnCommand)
+```
+
 ## 5. Chạy trên dự án thật
 
 ```bat
@@ -216,6 +317,44 @@ python mfcgraph.py diagnose --root D:\src\MyProduct
 - `--exclude "ThirdParty;Generated"`: bỏ qua thư mục. Mặc định đã bỏ qua `Debug`, `Release`, `x64`, `.git`, `.svn`, `.vs`, `ipch`, `obj`, `bin`.
 - `-v`: in tiến độ sau mỗi 500 file.
 - Tốc độ đo được: khoảng 1 triệu dòng (21.000 file) mất khoảng 27 giây, khoảng 350 MB RAM. Index lại khi code thay đổi nhiều.
+
+### Chọn nhánh #ifdef/#else (--define, --undef, --undef-unknown)
+
+Mặc định công cụ giữ **nhánh đầu tiên** của mỗi chuỗi `#if/#ifdef`, vì nó không biết macro của bản build. Nếu code bạn cần nằm trong `#else`, kết quả sẽ sai. Các tùy chọn:
+
+- `--define "A;B=1"`: macro được khai báo.
+- `--undef "C;D"`: macro được coi là không khai báo.
+- `--undef-unknown`: mọi macro không có trong `--define` được coi là không khai báo, giống trình biên dịch. Các macro dựng sẵn `_WIN32`, `WIN32`, `_MSC_VER` và `__cplusplus` (với file không phải `.c`) luôn được coi là đã khai báo.
+
+Cú pháp:
+
+```bat
+python mfcgraph.py index <root> [--define "A;B=1"] [--undef "C;D"] [--undef-unknown]
+```
+
+Khuyến nghị: copy `PreprocessorDefinitions` của cấu hình Release từ file `.vcxproj` vào `--define`, rồi thêm `--undef-unknown`.
+
+Số điều kiện `#if` được tính và số điều kiện không tính được xuất hiện trong `diagnose`. Ví dụ với `samples/Win32App`, chạy hai lần:
+
+```bat
+python mfcgraph.py index samples/Win32App
+python mfcgraph.py diagnose --root samples/Win32App
+```
+
+```
+#if conditions: evaluated 0, guessed (first branch kept) 14  (use index --define/--undef to decide them)
+```
+
+```bat
+python mfcgraph.py index samples/Win32App --undef-unknown
+python mfcgraph.py diagnose --root samples/Win32App
+```
+
+```
+#if conditions: evaluated 14, guessed (first branch kept) 0
+```
+
+Số `guessed` là số điều kiện công cụ không tính được, nên giữ nhánh đầu. Số này cần giảm khi dùng `--define`, `--undef` hoặc `--undef-unknown`. Nếu vẫn cao, thêm các macro đang dùng vào `--define`.
 
 Mẹo: tạo file `mfcgraph.bat` để gõ ngắn hơn:
 
@@ -308,12 +447,23 @@ Cách đánh giá nhanh:
 | `ambiguous` (call sites) | dưới 15% | cao |
 | `external` | 60–80% là bình thường | (lời gọi MFC/Win32) |
 
+Các dòng mới của v0.3 (ví dụ với `samples/Win32App`):
+
+```
+#if conditions: evaluated 14, guessed (first branch kept) 0
+win32: window/dialog procedures 5, switch-case / HANDLE_MSG dispatch entries linked 22, dialog/callback wiring links 7
+```
+
+- `#if conditions: evaluated N, guessed (first branch kept) M`: `N` là số điều kiện `#if` đã tính được, `M` là số không tính được (giữ nhánh đầu). `M` cần giảm khi dùng `--define`, `--undef` hoặc `--undef-unknown`.
+- `win32: window/dialog procedures N, switch-case / HANDLE_MSG dispatch entries linked M, dialog/callback wiring links K`: số procedure, số `case` và `HANDLE_MSG` đã nối tới ID hoặc thông báo, số liên kết dialog/callback.
+- Với dự án Win32, số `0` ở `window/dialog procedures` hoặc `dispatch entries linked` nghĩa là công cụ chưa nhận ra cách dispatch của dự án. Gửi lại các con số này.
+
 Khi thấy công cụ hiểu sai một đoạn code, hãy viết lại cấu trúc đó **với tên giả** thành một file nhỏ rồi gửi file đó.
 
 ## 8. Giới hạn của bản demo
 
 - Là bộ phân tích **dựa trên mẫu** (heuristic), không phải trình biên dịch: không khai triển macro tự định nghĩa, không hiểu template phức tạp. Chỗ không chắc được gắn nhãn `ambiguous`/`likely`.
-- Với `#if/#ifdef`, công cụ luôn lấy **nhánh đầu tiên**, riêng `#if 0` thì bỏ qua.
+- Với `#if/#ifdef`, công cụ lấy **nhánh đầu tiên** trừ khi dùng `--define`, `--undef` hoặc `--undef-unknown` (xem mục 5). `#if 0` luôn bị bỏ qua.
 - Chưa đọc file project (`.vcxproj/.dsp`) mà quét toàn bộ cây thư mục.
 - Chưa có index tăng dần: muốn cập nhật thì chạy lại `index`.
 - Chưa liên kết virtual dispatch từ lớp cha xuống lớp con.
@@ -337,12 +487,19 @@ mfcgraph_core/explore_render.py phân bổ ngân sách ký tự, dựng Flow/Sou
 mfcgraph_core/explore.py    ghép các bước: phân tích → tìm hàm xuất phát → xếp hạng → dựng kết quả
 mfcgraph_core/mcp.py        MCP server qua stdio (tùy chọn)
 mfcgraph_core/cli.py        giao diện dòng lệnh
+mfcgraph_core/cmode.py      chế độ C cho file .c: từ khóa C++ (new, class, this…) thành tên thường
+mfcgraph_core/pp_eval.py    tính điều kiện #if theo --define, --undef, --undef-unknown
+mfcgraph_core/win32.py      case trong procedure, HANDLE_MSG, DialogBox và wiring callback
 tests/test_mfcgraph.py      kiểm thử trên samples/LegacyApp
 tests/run_all.py            chạy mọi bộ kiểm thử
 tests/golden_test.py        so sánh output CLI với tests/golden/*.txt (--update để ghi lại)
 tests/eval_explore.py       đo recall của explore trên tests/scenarios.json; lỗi nếu recall trung bình < 0.9 hoặc vượt budget
 tests/scenarios.json        14 kịch bản: câu hỏi + hàm bắt buộc phải có trong kết quả
 samples/BigApp/             dự án mẫu thứ hai (47 file, MDI, nhiều module), dùng cho kịch bản explore
+samples/Win32App/           dự án mẫu Win32 + C (26 file, Shift-JIS, resource tiếng Nhật)
+tests/scenarios_win32.json  13 kịch bản cho Win32App
+tests/test_pp.py            kiểm thử tính điều kiện #if
+tests/test_win32.py         kiểm thử dispatch và wiring Win32
 ```
 
 Định dạng index giống hệt bản C++: hai bản đã được đối chiếu và cho kết quả trùng khớp trên gần 4.000 file C++ thật.
