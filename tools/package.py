@@ -15,7 +15,7 @@ sys.path.insert(0, ROOT)
 
 from mfcgraph_core import VERSION  # noqa: E402
 
-INCLUDE = ["mfcgraph.py", "README.md", "CHANGELOG.md", "CLAUDE.md", "mfcgraph_core", "tests", "samples", "docs",
+INCLUDE = ["mfcgraph.py", "__main__.py", "README.md", "CHANGELOG.md", "CLAUDE.md", "mfcgraph_core", "tests", "samples", "docs",
            "tools"]
 EXCLUDE_DIRS = {"__pycache__", ".mfcgraph", "cpp-reference", "dist", ".git", ".claude"}
 EXCLUDE_EXT = {".pyc", ".pyo"}
