@@ -163,3 +163,7 @@
 - `lexer.filter_conditionals`: macro name taken with a regex (`#ifdef (FOO)`, empty `#ifdef`, comments) instead of split()[0].
 - `index.build_index`: a file whose extraction raises is skipped (partial state rolled back), warning on stderr, `files.failed`
   counted; diagnose "files skipped because of an internal error: N". Tests in `tests/test_pp.py`.
+
+## Fix — run the tool folder directly
+- New `__main__.py` at repo root: `python <mfcgraph folder> serve ...` works like `python <folder>\mfcgraph.py` (user hit
+  "can't find '__main__' module" with a folder path in mcp.json). Packaged by tools/package.py. Test in tests/test_index.py.

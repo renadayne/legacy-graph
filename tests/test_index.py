@@ -71,6 +71,13 @@ def test_search_text(g):
     check("CExportDlg::OnOK  ExportDlg.cpp:67" in out, "S2c: Vietnamese text matched after NFC", out)
 
 
+def test_folder_launch():
+    import subprocess  # tests only; the tool itself never starts processes
+    out = subprocess.run([sys.executable, ROOT, "version"], capture_output=True, text=True, cwd=tempfile.gettempdir())
+    check(out.returncode == 0 and out.stdout.startswith("mfcgraph "), "python <folder> works (__main__.py)",
+          out.stdout + out.stderr)
+
+
 def test_v1_load():
     g = load_graph(os.path.join(HERE, "data", "legacy_v1.mfg"))
     check(len(g.nodes) > 100 and g.texts == [], "S2b: v1 index loads (texts empty)")
@@ -85,6 +92,7 @@ def main():
         test_search_text(g)
         test_refs(g, tmp)
         test_v1_load()
+        test_folder_launch()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("index: %d passed, %d failed" % (passed, failed))
