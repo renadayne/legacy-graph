@@ -25,7 +25,7 @@ Work plan: `docs/PLAN.md` (do ONE step at a time). Background: `docs/research-co
 - Every behaviour change needs a test in `tests/`; all tests must pass before a step is done.
 
 ## Environment: Claude Code cloud on the user's GitHub repo
-- Work on the session's branch (e.g. `claude/...`), never directly on `main` unless the user says so.
+- Work on the `develop` branch, never directly on `main` unless the user says so. PRs go `develop` → `main`.
 - One commit per step on that branch; push after every step. Keep one PR open for the branch
   (create it after the first pushed step if the session can; otherwise tell the user the branch name).
 - Do not rewrite pushed history (no rebase/amend/force-push of pushed commits).
@@ -37,6 +37,7 @@ Work plan: `docs/PLAN.md` (do ONE step at a time). Background: `docs/research-co
 2. Append ≤6 lines to `docs/STATUS.md`.
 3. Commit ONLY that step's files: `git add <files>` (never `git add -A` blindly; never add `.mfcgraph/`),
    message `S<id>: <short summary>` + a body listing changed files and the test result line.
+   No tool/AI attribution in commits or PRs: no `Co-Authored-By:` / `Claude-Session:` trailers, no "Generated with" lines.
 4. `git push` to the current branch. If push fails (no remote, auth, conflict): do NOT force-push, do NOT retry
    in a loop — report the error and leave the commit local.
 5. Never commit with failing tests; if a step must stop half-way, leave changes uncommitted and report.
