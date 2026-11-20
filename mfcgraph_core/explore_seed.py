@@ -19,6 +19,7 @@ Weights (tuned in S9; every number is a general principle, not a fit to one samp
     id 5 (handlers via handled_by, senders, functions using the id) · quoted 5 (literal or UI caption)
     word 1 per match (name segment / caption / literal / segment of a handled id name), at most WORD_CAP per node;
          a word hitting more than WORD_MAX_HITS nodes is scaled by WORD_MAX_HITS / hits.
+A word equal to a whole function/class name (any case, e.g. "kc590", "recalculate") is treated as ident.
 A word equal to a directory name of the tree (e.g. "billing") adds that directory to scope_dirs:
 developers name the module they suspect.
 A function called up to NEAR_CALL_LINES lines before a matched message literal also gets W_QUOTED * W_NEAR_CALL:
@@ -30,6 +31,8 @@ import difflib
 import re
 import unicodedata
 from collections import namedtuple
+
+from .explore_query import Term
 
 SeedResult = namedtuple("SeedResult",
                         "seeds exact pinned_files scope_dirs focus file_focus unmatched suggestions texts ids")
@@ -237,7 +240,11 @@ class _Seeder:
         if not found and not fields:
             if v in self.ids:
                 return self.t_id(t)
-            return False
+            # no symbol of that name: report it (did you mean) but still try it as an ordinary word
+            self.unmatched.append(t)
+            self.suggest(t)
+            self.t_word(Term("word", v.lower(), ""), allow_name=False)
+            return True
         if len(found) > 1 and self.pinned:
             found = [x for x in found if self.g.nodes[x].file in self.pinned] or found
         if len(found) > 1 and self.scope:
@@ -385,8 +392,19 @@ class _Seeder:
         g._explore_words = (seg_nodes, sorted(seg_nodes), texts)
         return g._explore_words
 
-    def t_word(self, t):
+    def name_index(self):
+        """{lower-case function/class name: True} for whole-name matches of plain words."""
+        cached = getattr(self.g, "_explore_names", None)
+        if cached is None:
+            cached = {n.name.lower() for n in self.g.nodes if n.kind in ("function", "class")}
+            self.g._explore_names = cached
+        return cached
+
+    def t_word(self, t, allow_name=True):
         w = t.value
+        if allow_name and w in self.name_index():
+            # the developer typed a whole symbol name (any case): kc590, recalculate, KC591INIT
+            return self.t_ident(Term("ident", w, ""))
         hit = False
         if w in self.dirs:
             for d in sorted(self.dirs[w]):

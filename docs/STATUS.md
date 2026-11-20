@@ -167,3 +167,9 @@
 ## Fix — run the tool folder directly
 - New `__main__.py` at repo root: `python <mfcgraph folder> serve ...` works like `python <folder>\mfcgraph.py` (user hit
   "can't find '__main__' module" with a folder path in mcp.json). Packaged by tools/package.py. Test in tests/test_index.py.
+
+## Fix — names with letters + digits (reported: `kc590` returned 0 results)
+- explore_query: tokens mixing letters and digits (`ab123`, `XY777`) are `ident`, not `word`.
+- explore_seed: a word equal to a whole function/class name (any case) is treated as ident (cached name set); an ident that
+  matches no symbol is reported in Did you mean AND still tried as a word (typo queries now also return lexical matches).
+- Tests: test_explore_query (26), test_explore_seed (letter+digit project, 26); golden explore_typo updated. Evals unchanged (1.0/1.0).

@@ -8,7 +8,7 @@ Interface:
       qualified  "A::B" (also "A.B" when A is PascalCase)              value = "A::B", extra = ""
       id         ID_ IDD_ IDC_ IDS_ IDR_ IDM_ WM_ UWM_ + upper case    value = token
       quoted     text inside "..." '...' “...” ‘...’ (kept verbatim)  value = text
-      ident      CamelCase, contains "_", or starts with m_            value = token
+      ident      CamelCase, contains "_", starts with m_, or mixes letters and digits (kc590)   value = token
       word       anything else, lower-cased (NFC), stopwords and STOP_PHRASES removed   value = word
 Terms keep query order; duplicates (same kind and value) are dropped.
 """
@@ -25,6 +25,7 @@ _RE_ANCHOR = re.compile(r"^(.+\.(?:%s)):(\d+)(?:\s*-\s*(\d+))?$" % _EXT, re.I)
 _RE_FILE = re.compile(r"\.(?:%s)$" % _EXT, re.I)
 _RE_ID = re.compile(r"^(?:ID|IDD|IDC|IDS|IDR|IDM|WM|UWM)_[A-Z0-9_]+$")
 _RE_IDENT_CHARS = re.compile(r"^[A-Za-z_~][A-Za-z0-9_]*$")
+_RE_LETTER_DIGIT = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z_][A-Za-z0-9_]*$")  # kc590, KC590, Func2
 _RE_DOTTED = re.compile(r"^([A-Z][A-Za-z0-9_]*[a-z][A-Za-z0-9_]*)\.(~?[A-Za-z_][A-Za-z0-9_]*)$")
 _RE_QUOTED = re.compile(r'"([^"]+)"|“([^”]+)”|‘([^’]+)’|(?:(?<=\s)|^)\'([^\']+)\'(?=[\s,.;:!?)]|$)')
 _STRIP = ",;!?()[]{}<>“”‘’\"'"
@@ -81,7 +82,8 @@ def _classify(tok):
         return Term("qualified", m.group(1) + "::" + m.group(2), "")
     if _RE_ID.match(tok):
         return Term("id", tok, "")
-    if _RE_IDENT_CHARS.match(tok) and (_is_camel(tok) or "_" in tok.strip("_") or tok.startswith("m_")):
+    if _RE_IDENT_CHARS.match(tok) and (_is_camel(tok) or "_" in tok.strip("_") or tok.startswith("m_")
+                                       or _RE_LETTER_DIGIT.match(tok)):
         return Term("ident", tok, "")
     w = tok.lower()
     if len(w) < 2 or w in STOPWORDS or w.isdigit():
