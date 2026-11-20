@@ -31,6 +31,11 @@ class RawFunc:
         self.ddx = []      # (macro, id, member, line)
         self.locals = {}   # variable -> type
         self.strings = []  # (line, text) string literals in the body (see extract_cpp.scan_strings)
+        self.cases = []    # (label, line, end_line, parent_label) switch cases (win32.scan_switches)
+        self.crackers = [] # (msg, handler, line) HANDLE_MSG
+        self.dialog_procs = []  # (IDD, proc name, line) DialogBox*/CreateDialog*
+        self.wired = []    # (node, line) resolved dialog procs / callbacks (filled by win32.make_wiring)
+        self.fnrefs = []   # (name, line) identifiers used as values: possible function pointers (win32.scan_wiring)
         self.refs = []     # (name, recv, line, mode) member/global variable refs, mode 'r'|'w' (scan_refs)
 
 
@@ -94,6 +99,7 @@ class RawData:
         self.uiitems = []    # dict(file, kind, owner, label, id, line)
         self.strings = []    # (file, id, text, line)
         self.unknown_macros = {}
+        self.failed = []     # relative paths skipped because extraction raised (see index.build_index)
 
 
 class Node:
@@ -136,6 +142,9 @@ class Graph:
         self.edges = []
         self.stats = {}
         self.texts = []   # (func_node, line, text): string literals in function bodies (index v2)
+        self.pp_defines = []        # [(name, value)] from index --define (v3)
+        self.pp_undefs = []         # [name] from index --undef
+        self.pp_undef_unknown = False
         self.refs = []    # (func_node, line, "Class::field" | "g_name" | "ID_X", mode 'r'|'w'); DDX counts as 'w'
         self.out = []
         self.inn = []

@@ -110,3 +110,66 @@
 ## S14 — packaging
 - `tools/package.py [--out DIR]` → `dist/mfcgraph-py-0.2.zip` (zipfile; excludes __pycache__, .mfcgraph, cpp-reference, .git, .claude).
 - `CHANGELOG.md`; VERSION = 0.2.0. v0.2 plan complete (S0–S14).
+
+## v0.3 plan
+- `docs/PLAN-v0.3.md`: mixed MFC + Win32 + C (user's diagnose: Win32 switch dispatch, CALLBACK=300, #else=329, Shift-JIS).
+- Steps S15 (Win32App sample) … S21. Open questions in §4 (which #ifdef macros; HANDLE_MSG usage). Next: S15.
+
+## S16 — C mode for .c files
+- New `mfcgraph_core/cmode.py`: in `.c` files, C++-only keywords (`new class this delete template operator …`) are marked before
+  extraction and unmarked after (`protect`, `snapshot`, `restore`), so C names like `void delete(...)`, `struct x *new` parse.
+- `index.build_index` applies it to `.c` only (headers stay C++). Tests in `tests/test_extract.py`. (Committed before S15: sample still in progress.)
+
+## S15 — Win32App sample + scenarios
+- `samples/Win32App/` (26 files, sample-writer, reviewed): WndProc/DlgProc switch dispatch, HANDLE_MSG, DialogBox(Param), lpfnWndProc,
+  SetWindowLongPtr subclass, CreateThread + PostMessage(WM_APP_SAVE_DONE), SetTimer callback, .c files (new/class names, static
+  ParseLine twice), #ifdef USE_INI_FILE stub / #else real code, small MFC part. CP932: MainWnd.cpp, OptionsDlg.cpp, ExportDlg.cpp.
+- `tests/scenarios_win32.json` (13). Baseline (codepage 932, before S17–S19): recall 0.808; misses: menu/ID → case dispatch (2, 5, 1).
+
+## S17 — #if evaluation (--define / --undef / --undef-unknown)
+- New `mfcgraph_core/pp_eval.py`: `PPConfig(defines, undefs, undef_unknown).for_file(is_c) -> FileMacros` (ifdef / eval_if, 3-valued:
+  unknown → first branch kept, counted "guessed"); builtins _WIN32 WIN32 _MSC_VER, __cplusplus for non-.c. In-file #define/#undef tracked.
+- `lexer.filter_conditionals(tokens, macros=None, stats=None)` (None = v0.2 behaviour). `build_index(..., pp=PPConfig)`; CLI index options.
+- Index v3: `D` records keep the config; diagnose "#if conditions: evaluated N, guessed M". Tests: `tests/test_pp.py` (27).
+
+## S18 — Win32 dispatch
+- New `mfcgraph_core/win32.py`: `scan_switches` (RawFunc.cases [(label, line, end, parent)], crackers from HANDLE_MSG) and
+  `make_dispatch`: id --handled_by--> proc ("case@line"), id --case_calls--> callees inside the case, HANDLE_MSG edges, flag win32-proc.
+- explore: seeds get the case line as focus; Flow/Blast UI entries limited to the ids the query reached (SeedResult.ids).
+- Ranking: ids handled by > 2 functions (IDOK…) scaled down (GENERIC_ID_FANOUT); leftover budget goes to files between 5% and 15%.
+- diagnose "win32: procedures N, dispatch entries M". Win32App recall 0.808 → 0.885; BigApp 1.000. Tests: `tests/test_win32.py` (16).
+
+## S19 — Win32 wiring
+- `win32.scan_wiring` / `make_wiring`: DialogBox*/CreateDialog*(IDD, Proc) → Proc --uses_dialog--> dialog + caller --callback--> Proc;
+  identifiers used as values that resolve to functions (lpfnWndProc, SetTimer, CreateThread, SetWindowLongPtr…) → callback edge
+  (class names, ctors, already-linked calls skipped); callbacks inside `case ID:` → id --case_calls--> proc.
+- explore: entry path prefers the queried ids; shared IDOK shown only for this proc's dialogs; calls ≤3 lines before a matched
+  message literal seeded (W_NEAR_CALL 0.6). Win32App 0.885, BigApp 1.000. 20k files: index 15.3 s, 470 MB. Tests: test_win32 (27).
+
+## S20 — Win32 evaluation + tuning
+- `tests/eval_explore.py --win32` (Win32App, codepage 932, --undef-unknown) added to run_all; `--codepage`, `--undef-unknown` options.
+- Tuning (general rules): CJK menu mnemonics "(&S)" stripped from captions; CJK chars count 2 for the min caption length;
+  calls just before a STRINGTABLE message use (IDS_/IDP_) are seeded like literal messages.
+- Recall @8000: Win32App 1.000 (13/13 in budget), BigApp 1.000. @4000: 0.936 / 0.905; @3000: 0.897 / 0.869.
+
+## S21a — diagnose, CHANGELOG, version 0.3.0
+- `diagnose` files line shows C files (`source N of which C M`); #if and win32 lines added in S17/S18/S19. VERSION 0.3.0, CHANGELOG 0.3.0.
+
+## S21b — README v0.3 (doc-writer, reviewed)
+- README (VI): Win32/C sample section with real output, #ifdef selection (--define/--undef/--undef-unknown, .vcxproj tip), new diagnose
+  lines, two eval tables, new modules; PowerShell/cmd quoting for Japanese queries. v0.3 plan complete (S15–S21).
+
+## S17-fix — crash on "#ifdef (X)" (reported from the real project)
+- `lexer.filter_conditionals`: macro name taken with a regex (`#ifdef (FOO)`, empty `#ifdef`, comments) instead of split()[0].
+- `index.build_index`: a file whose extraction raises is skipped (partial state rolled back), warning on stderr, `files.failed`
+  counted; diagnose "files skipped because of an internal error: N". Tests in `tests/test_pp.py`.
+
+## Fix — run the tool folder directly
+- New `__main__.py` at repo root: `python <mfcgraph folder> serve ...` works like `python <folder>\mfcgraph.py` (user hit
+  "can't find '__main__' module" with a folder path in mcp.json). Packaged by tools/package.py. Test in tests/test_index.py.
+
+## Fix — names with letters + digits (reported: `kc590` returned 0 results)
+- explore_query: tokens mixing letters and digits (`ab123`, `XY777`) are `ident`, not `word`.
+- explore_seed: a word equal to a whole function/class name (any case) is treated as ident (cached name set); an ident that
+  matches no symbol is reported in Did you mean AND still tried as a word (typo queries now also return lexical matches).
+- Tests: test_explore_query (26), test_explore_seed (letter+digit project, 26); golden explore_typo updated. Evals unchanged (1.0/1.0).

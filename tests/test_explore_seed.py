@@ -11,7 +11,7 @@ sys.path.insert(0, ROOT)
 
 from mfcgraph_core.index import build_index  # noqa: E402
 from mfcgraph_core.explore_query import parse_query  # noqa: E402
-from mfcgraph_core.explore_seed import seed, segments  # noqa: E402
+from mfcgraph_core.explore_seed import seed, segments, clean_caption, text_len  # noqa: E402
 
 passed = 0
 failed = 0
@@ -39,9 +39,34 @@ def qn(g, r):
     return {g.nodes[n].qname for n in r.seeds}
 
 
+def test_letter_digit_names():
+    import shutil
+    import tempfile
+    from mfcgraph_core.explore import explore
+    tmp = tempfile.mkdtemp(prefix="mfcgraph_ld_")
+    try:
+        os.makedirs(os.path.join(tmp, "ab"))
+        with open(os.path.join(tmp, "ab", "ab123.c"), "w") as fh:
+            fh.write("static int helper(int a)\n{\n    return a * 2;\n}\n\nint ab123(int code)\n{\n"
+                     "    return helper(code);\n}\n\nvoid AB124Init(void)\n{\n    ab123(1);\n}\n")
+        g = build_index(tmp)
+        for q in ("ab123", "AB123", "ab124init", "ab123 returns wrong value"):
+            out = explore(g, q)
+            check("6\tint ab123(int code)" in out or "11\tvoid AB124Init(void)" in out,
+                  "letter+digit name found: %s" % q, out[:300])
+        out = explore(g, "ab129")
+        check("ab129 → ab123" in out, "letter+digit typo -> did you mean", out[-200:])
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     check(segments("OnBnClickedRecalc") == ["on", "bn", "clicked", "recalc"], "segments camel")
     check(segments("CExportDlg") == ["c", "export", "dlg"], "segments class prefix", segments("CExportDlg"))
+
+    check(clean_caption("保存(&S)\tCtrl+S") == "保存" and clean_caption("エクスポート(&E)...") == "エクスポート",
+          "S20: CJK mnemonic removed", clean_caption("保存(&S)\tCtrl+S"))
+    check(clean_caption("&Export...") == "Export" and text_len("保存") == 4 and text_len("Save") == 4, "S20: text_len")
 
     g = build_index(os.path.join(ROOT, "samples", "LegacyApp"))
     r = run(g, "MainFrm.cpp:69")
@@ -80,6 +105,7 @@ def main():
     check(files == {"Report/ReportBuilder.cpp"}, "duplicate static: pinned file wins", files)
     r = run(b, "Billing/ discount")
     check(r.scope_dirs == ["Billing"], "path dir -> scope", r.scope_dirs)
+    test_letter_digit_names()
     print("explore_seed: %d passed, %d failed" % (passed, failed))
     return 1 if failed else 0
 

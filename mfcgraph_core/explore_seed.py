@@ -12,14 +12,18 @@ Interface:
       unmatched    list[Term]                    non-word terms that matched nothing
       suggestions  {term_value: [names]}         "did you mean" for unmatched ident / qualified terms
       texts        [(func, line, text)]          literals matched by quoted terms (for the Flow section)
+      ids          set(node_id)                  id/dialog nodes the query reached (Flow shows only their UI entries)
 
 Weights (tuned in S9; every number is a general principle, not a fit to one sample):
     anchor 10 (exact) · qualified 8 (exact) · ident 6 (<= 5 definitions; more -> 30 split evenly)
     id 5 (handlers via handled_by, senders, functions using the id) · quoted 5 (literal or UI caption)
     word 1 per match (name segment / caption / literal / segment of a handled id name), at most WORD_CAP per node;
          a word hitting more than WORD_MAX_HITS nodes is scaled by WORD_MAX_HITS / hits.
+A word equal to a whole function/class name (any case, e.g. "kc590", "recalculate") is treated as ident.
 A word equal to a directory name of the tree (e.g. "billing") adds that directory to scope_dirs:
 developers name the module they suspect.
+A function called up to NEAR_CALL_LINES lines before a matched message literal also gets W_QUOTED * W_NEAR_CALL:
+the message is usually shown right after the failing call.
 Captions (menu items, dialog captions, button texts, string table) that appear verbatim inside the query text
 count like a quoted term, so `bấm Tính lại thì ...` finds the "Tính lại" button without quotes.
 """
@@ -28,7 +32,10 @@ import re
 import unicodedata
 from collections import namedtuple
 
-SeedResult = namedtuple("SeedResult", "seeds exact pinned_files scope_dirs focus file_focus unmatched suggestions texts")
+from .explore_query import Term
+
+SeedResult = namedtuple("SeedResult",
+                        "seeds exact pinned_files scope_dirs focus file_focus unmatched suggestions texts ids")
 
 W_ANCHOR = 10.0
 W_QUALIFIED = 8.0
@@ -41,7 +48,10 @@ WORD_CAP = 3.0
 WORD_MAX_HITS = 40    # a word matching more nodes than this has its weight spread over them
 W_REF_WRITE = 5.0     # function writing a named field
 W_REF_READ = 2.0      # function reading a named field
-MIN_CAPTION = 4       # shortest caption matched inside free query text
+W_NEAR_CALL = 0.6     # function called in the NEAR_CALL_LINES lines before a matched message literal
+NEAR_CALL_LINES = 3
+W_CASE_CALL = 0.6     # function called inside `case ID:` of a window procedure (fraction of the id weight)
+MIN_CAPTION = 4       # shortest caption matched inside free query text (text_len: CJK characters count 2)
 
 _SEG = re.compile(r"[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|\d+")
 
@@ -50,9 +60,17 @@ def norm(s):
     return unicodedata.normalize("NFC", s).casefold()
 
 
+_MNEMONIC = re.compile(r"\(&\w\)")   # CJK menus: "保存(&S)"
+
+
 def clean_caption(s):
-    s = s.split("\t")[0].replace("&", "")
-    return s.strip().rstrip(".").strip()
+    s = _MNEMONIC.sub("", s.split("\t")[0]).replace("&", "")
+    return s.strip().rstrip(".").rstrip("…").strip()
+
+
+def text_len(s):
+    """Length for 'is this caption long enough to match on its own': a CJK character counts 2 (it is a word)."""
+    return sum(2 if ord(c) >= 0x2E80 else 1 for c in s)
 
 
 def segments(name):
@@ -84,6 +102,7 @@ class _Seeder:
         self.unmatched = []
         self.suggestions = {}
         self.texts = []
+        self.ids_hit = set()
         self.word_score = {}
         self.qtext = norm(query_text or "")
         self._index()
@@ -221,7 +240,11 @@ class _Seeder:
         if not found and not fields:
             if v in self.ids:
                 return self.t_id(t)
-            return False
+            # no symbol of that name: report it (did you mean) but still try it as an ordinary word
+            self.unmatched.append(t)
+            self.suggest(t)
+            self.t_word(Term("word", v.lower(), ""), allow_name=False)
+            return True
         if len(found) > 1 and self.pinned:
             found = [x for x in found if self.g.nodes[x].file in self.pinned] or found
         if len(found) > 1 and self.scope:
@@ -245,11 +268,20 @@ class _Seeder:
 
     def seed_id(self, idn, w, reason):
         g = self.g
+        self.ids_hit.add(idn)
         name = g.nodes[idn].name
         any_hit = False
-        for fn in self.handlers_of_id(idn):
-            self.add(fn, w, "handles " + reason)
-            any_hit = True
+        for ei in g.out[idn]:
+            e = g.edges[ei]
+            if g.nodes[e.dst].kind != "function":
+                continue
+            if e.kind == "handled_by":
+                # switch-based dispatch: the case line is where the id is handled
+                self.add(e.dst, w, "handles " + reason, e.line if e.extra.startswith("case@") else None)
+                any_hit = True
+            elif e.kind == "case_calls":
+                self.add(e.dst, w * W_CASE_CALL, "called in case " + reason, e.line)
+                any_hit = True
         for ei in g.inn[idn]:
             e = g.edges[ei]
             src = g.nodes[e.src]
@@ -261,6 +293,8 @@ class _Seeder:
                 any_hit = True
         for (fn, line, mode) in self.ref_targets.get(name, ()):
             self.add(fn, w * 0.8, "uses " + reason, line)
+            if name.startswith(("IDS_", "IDP_")):  # message from the string table: shown after the failing call
+                self.seed_calls_before(fn, line)
             any_hit = True
         return any_hit
 
@@ -312,11 +346,21 @@ class _Seeder:
             if q in norm(text):
                 self.add(fn, W_QUOTED, 'contains "%s"' % text[:40], line)
                 self.texts.append((fn, line, text))
+                self.seed_calls_before(fn, line)
                 hit = True
         for cap in self.caption_targets():
-            if q == cap[0] or (len(q) >= MIN_CAPTION and q in cap[0]):
+            if q == cap[0] or (text_len(q) >= MIN_CAPTION and q in cap[0]):
                 hit = self.seed_caption(cap, W_QUOTED, "caption") or hit
         return hit
+
+    def seed_calls_before(self, fn, line):
+        """An error message usually follows the failing call: `if (!ExportCsv(..)) MessageBox(..)`."""
+        g = self.g
+        for ei in g.out[fn]:
+            e = g.edges[ei]
+            if (e.kind == "calls" and g.nodes[e.dst].kind == "function"
+                    and line - NEAR_CALL_LINES <= e.line <= line):
+                self.add(e.dst, W_QUOTED * W_NEAR_CALL, "called just before the message", e.line)
 
     def captions_in_text(self):
         if not self.qtext:
@@ -324,7 +368,7 @@ class _Seeder:
         done = set()
         for cap in self.caption_targets():
             c = cap[0]
-            if len(c) < MIN_CAPTION or (c, cap[2]) in done:
+            if text_len(c) < MIN_CAPTION or (c, cap[2]) in done:
                 continue
             if re.search(r"(?<!\w)" + re.escape(c) + r"(?!\w)", self.qtext):
                 done.add((c, cap[2]))
@@ -348,8 +392,19 @@ class _Seeder:
         g._explore_words = (seg_nodes, sorted(seg_nodes), texts)
         return g._explore_words
 
-    def t_word(self, t):
+    def name_index(self):
+        """{lower-case function/class name: True} for whole-name matches of plain words."""
+        cached = getattr(self.g, "_explore_names", None)
+        if cached is None:
+            cached = {n.name.lower() for n in self.g.nodes if n.kind in ("function", "class")}
+            self.g._explore_names = cached
+        return cached
+
+    def t_word(self, t, allow_name=True):
         w = t.value
+        if allow_name and w in self.name_index():
+            # the developer typed a whole symbol name (any case): kc590, recalculate, KC591INIT
+            return self.t_ident(Term("ident", w, ""))
         hit = False
         if w in self.dirs:
             for d in sorted(self.dirs[w]):
@@ -421,7 +476,7 @@ class _Seeder:
                     self.suggest(t)
         self.captions_in_text()
         return SeedResult(self.seeds, self.exact, self.pinned, self.scope, self.focus, self.file_focus,
-                          self.unmatched, self.suggestions, self.texts)
+                          self.unmatched, self.suggestions, self.texts, self.ids_hit)
 
 
 def seed(graph, terms, scope_dirs=(), query_text=""):

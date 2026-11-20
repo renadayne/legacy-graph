@@ -46,6 +46,7 @@ CASES = [
     ("export export Export", [T("word", "export")]),
     ("", []),
     ("CExportDlg OnOK", [T("ident", "CExportDlg"), T("ident", "OnOK")]),
+    ("ab123 XY777 returns wrong value", [T("ident", "ab123"), T("ident", "XY777"), T("word", "returns")]),
 ]
 
 

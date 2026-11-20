@@ -598,11 +598,15 @@ def q_diagnose(g, show_names=False):
     enc = "".join("  %s=%s" % (k[9:], v) for k, v in sorted(g.stats.items()) if k.startswith("encoding."))
     lines = [
         "mfcgraph diagnose (counts only; no names, no code)",
-        "files: %s  (source %s, header %s, resource %s)" % (s("files.total"), s("files.source"),
-                                                          s("files.header"), s("files.resource")),
+        "files: %s  (source %s of which C %s, header %s, resource %s)" % (
+            s("files.total"), s("files.source"), s("files.c"), s("files.header"), s("files.resource")),
         "encodings:" + enc,
         "files with unbalanced braces: " + s("files.brace_error"),
+        "files skipped because of an internal error: " + s("files.failed"),
         "tokens skipped in inactive #if branches: " + s("tokens.inactive_skipped"),
+        "#if conditions: evaluated %s, guessed (first branch kept) %s%s" % (
+            s("pp.evaluated"), s("pp.guessed"),
+            "" if (g.pp_defines or g.pp_undefs or g.pp_undef_unknown) else "  (use index --define/--undef to decide them)"),
         "classes: " + s("classes"),
         "functions: defined %s, declared-only %s, framework entry points %s, message handlers %s" % (
             s("functions.defined"), s("functions.decl_only"), s("functions.framework_entry"),
@@ -613,6 +617,8 @@ def q_diagnose(g, show_names=False):
         "message-map entries: %s  handler found in code %s, handled by an MFC base class %s, NOT FOUND %s" % (
             s("msgmap.entries"), _pct(s("msgmap.resolved"), s("msgmap.entries")),
             _pct(s("msgmap.framework"), s("msgmap.entries")), _pct(s("msgmap.unresolved"), s("msgmap.entries"))),
+        "win32: window/dialog procedures %s, switch-case / HANDLE_MSG dispatch entries linked %s, "
+        "dialog/callback wiring links %s" % (s("win32.procs"), s("win32.dispatch"), s("win32.wiring")),
         "unrecognised ON_ macros: %s uses of %s kinds%s" % (
             s("msgmap.unknown_macros"), s("msgmap.unknown_macro_kinds"),
             ("  [%s]" % g.stats.get("msgmap.unknown_macro_names", "")) if show_names

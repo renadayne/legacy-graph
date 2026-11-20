@@ -40,7 +40,7 @@ def test_v2_roundtrip(g, tmp):
     path = os.path.join(tmp, "index.mfg")
     save_graph(g, path)
     with open(path, encoding="utf-8") as fh:
-        check(fh.readline().startswith("MFCGRAPH\t2\t"), "S2b: header version 2")
+        check(fh.readline().startswith("MFCGRAPH\t3\t"), "S17: header version 3")
     g2 = load_graph(path)
     check(g2.texts == g.texts and len(g.texts) > 0, "S2b: texts survive save/load", len(g.texts))
     check([(f.mtime, f.size) for f in g2.files] == [(f.mtime, f.size) for f in g.files], "S2b: mtime/size kept")
@@ -71,6 +71,13 @@ def test_search_text(g):
     check("CExportDlg::OnOK  ExportDlg.cpp:67" in out, "S2c: Vietnamese text matched after NFC", out)
 
 
+def test_folder_launch():
+    import subprocess  # tests only; the tool itself never starts processes
+    out = subprocess.run([sys.executable, ROOT, "version"], capture_output=True, text=True, cwd=tempfile.gettempdir())
+    check(out.returncode == 0 and out.stdout.startswith("mfcgraph "), "python <folder> works (__main__.py)",
+          out.stdout + out.stderr)
+
+
 def test_v1_load():
     g = load_graph(os.path.join(HERE, "data", "legacy_v1.mfg"))
     check(len(g.nodes) > 100 and g.texts == [], "S2b: v1 index loads (texts empty)")
@@ -85,6 +92,7 @@ def main():
         test_search_text(g)
         test_refs(g, tmp)
         test_v1_load()
+        test_folder_launch()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("index: %d passed, %d failed" % (passed, failed))
