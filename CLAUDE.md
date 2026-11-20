@@ -43,6 +43,7 @@ Work plan: `docs/PLAN.md` (do ONE step at a time). Background: `docs/research-co
 5. Never commit with failing tests; if a step must stop half-way, leave changes uncommitted and report.
 
 ## Working with subagents (cost control)
-- Delegate a task to `implementer` (Sonnet) or `doc-writer` (Haiku) ONLY when it fits the brief template in
+- Delegate to a cheaper model (Sonnet for code, Haiku for docs) ONLY when the task fits the brief template in
   `docs/PLAN.md §2`: ≤3 files to touch, exact files to read listed, verifiable by tests. Otherwise do it yourself.
 - Give the subagent the brief only — never "explore the repo". Review its diff and run the tests yourself.
+- Do not add a `.claude/` folder to the repository.
