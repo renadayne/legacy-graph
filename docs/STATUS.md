@@ -188,3 +188,9 @@
 - `index --vcxproj "a.vcxproj;b.sln" [--config Release|Win32|Debug] [--vcxproj-scope listed|folders]`: files the projects list, each
   file with its own project's defines (+ --define/--undef), undef-unknown on. `build_index(files=, pp_by_file=)`, `index.scan_tree`.
 - Samples: BigApp.sln, BigApp.vcxproj, Billing/Billing.vcxproj, props/BigApp.props (synthetic). Tests: `tests/test_vcxproj.py` (45).
+
+## S23 — remembered index settings
+- New `mfcgraph_core/settings.py`: `<root>/.mfcgraph/settings.json` (codepage, exclude, define, undef, undef_unknown, vcxproj (relative
+  to root when inside), config, vcxproj_scope). `load/save/apply/from_args/describe`, `CONFIG_OPTIONS`.
+- `index <root>` without setting options reuses them ("Using saved settings: …"); any setting option = fresh settings (no merge).
+  Saved after every successful index; broken/odd-typed file ignored. `cli._parse` records `given` options. Tests: test_settings (12).

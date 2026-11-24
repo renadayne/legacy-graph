@@ -11,6 +11,7 @@ from .query import (q_search, q_node, q_callers, q_callees, q_impact, q_trace, q
 USAGE = """mfcgraph %s - offline code graph for C++/MFC (no network, no telemetry)
 
 Usage:
+  python mfcgraph.py index <root>                     re-index with the settings saved by the last index
   python mfcgraph.py index <root> [--codepage 1258] [--exclude dir1;dir2] [-v]
                      [--define "A;B=1"] [--undef "C;D"] [--undef-unknown]   pick #ifdef/#else branches by macros
                      [--vcxproj "a.vcxproj;b.sln"] [--config "Release|Win32"] [--vcxproj-scope listed|folders]
@@ -39,10 +40,12 @@ Common options:
 def _parse(argv):
     a = {"pos": [], "root": "", "index": "", "exclude": "", "codepage": 1258, "depth": -1, "lines": 80,
          "no_code": False, "show_names": False, "verbose": False, "budget": 0, "scope": "", "define": "", "undef": "", "undef_unknown": False,
-         "vcxproj": "", "config": "", "vcxproj_scope": ""}
+         "vcxproj": "", "config": "", "vcxproj_scope": "", "given": set()}
     i = 0
     while i < len(argv):
         s = argv[i]
+        if s.startswith("--"):
+            a["given"].add(s)
         nxt = argv[i + 1] if i + 1 < len(argv) else ""
         if s in ("--root", "--index", "--exclude", "--scope", "--define", "--undef", "--vcxproj", "--config",
                  "--vcxproj-scope"):
@@ -114,6 +117,12 @@ def main(argv=None):
 
     if cmd == "index":
         root = a["pos"][0] if a["pos"] else (a["root"] or ".")
+        from . import settings
+        if os.path.isdir(root) and not (a["given"] & set(settings.CONFIG_OPTIONS)):
+            saved = settings.load(root)
+            if saved is not None:
+                settings.apply(saved, a, root)
+                print("Using saved settings: " + settings.describe(saved))
         excludes = [x.strip() for x in a["exclude"].split(";") if x.strip()]
         t0 = time.time()
         try:
@@ -123,6 +132,7 @@ def main(argv=None):
             return 2
         path = index_path_for_root(g.root)
         save_graph(g, path)
+        settings.save(g.root, settings.from_args(a, g.root))
         st = g.stats
         print("Indexed %s files in %.2f s -> %s" % (st["files.total"], time.time() - t0, path))
         print("  classes %s, functions %s, message-map entries %s, dialogs %s, menu items %s" % (
