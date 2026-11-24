@@ -177,3 +177,7 @@
 ## Fix — golden tests failed on Windows checkouts (core.autocrlf=true)
 - Git turned `tests/golden/*.txt` into CRLF; golden_test compares bytes (`newline=""`), so every case failed though the tool output was right.
 - New `.gitattributes`: golden files `eol=lf`, `tests/data/*` binary (-text). Tests: ALL: OK on Windows.
+
+## v0.4 plan
+- `docs/PLAN-v0.4.md`: easy run (read .vcxproj/.sln, remembered settings.json, mcp-config --write with backup, optional tkinter GUI
+  in separate `mfcgraph_gui/`). Steps S22-S26. User chose: GUI may write .mcp.json only via its own button. Next: S22.
