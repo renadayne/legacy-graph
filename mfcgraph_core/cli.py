@@ -30,6 +30,7 @@ Usage:
   python mfcgraph.py diagnose [--show-names]         counts only, safe to share outside
   python mfcgraph.py status
   python mfcgraph.py serve                           MCP server on stdin/stdout (optional)
+  python mfcgraph.py gui [--root R]                  optional window: guide, pick .vcxproj/.sln, index, MCP config
   python mfcgraph.py mcp-config [--root R] [--name mfcgraph] [--tools explore] [--write FILE]
                                                       print the MCP server entry; --write adds/updates it in FILE
                                                       (.mcp.json / .vscode/mcp.json), other servers kept, FILE.bak saved
@@ -138,6 +139,31 @@ def _mcp_config(a):
     return 0
 
 
+GUI_NO_TK = ("error: the GUI needs tkinter, which this Python installation does not have.\n"
+             "  Fix: run the Python installer again > Modify > tick 'tcl/tk and IDLE' (no pip needed).\n"
+             "  Everything else (index, explore, serve, mcp-config ...) works without it.\n")
+
+
+def _gui(a):
+    """Optional GUI: tkinter and mfcgraph_gui are imported only here, so a missing GUI never breaks the CLI."""
+    try:
+        import tkinter  # noqa: F401
+    except ImportError:
+        sys.stderr.write(GUI_NO_TK)
+        return 2
+    try:
+        from mfcgraph_gui.app import run
+    except ImportError as ex:
+        sys.stderr.write("error: GUI files missing or broken (mfcgraph_gui/): %s\n" % ex)
+        return 2
+    root = a["pos"][0] if a["pos"] else a["root"]
+    try:
+        return run(root)
+    except tkinter.TclError as ex:
+        sys.stderr.write("error: cannot open a window (%s)\n" % ex)
+        return 2
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     _setup_stdout()
@@ -177,6 +203,8 @@ def main(argv=None):
 
     if cmd == "mcp-config":
         return _mcp_config(a)
+    if cmd == "gui":
+        return _gui(a)
 
     if a["index"]:
         ipath = a["index"]

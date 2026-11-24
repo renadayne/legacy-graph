@@ -9,7 +9,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 SUITES = ["test_mfcgraph.py", "golden_test.py", "test_extract.py", "test_index.py", "test_explore_query.py",
           "test_explore_seed.py", "test_explore_windows.py", "test_explore.py", "test_pp.py", "test_win32.py",
-          "test_vcxproj.py", "test_settings.py", "test_mcp_config.py", "eval_explore.py", ("eval_explore.py", "--win32")]
+          "test_vcxproj.py", "test_settings.py", "test_mcp_config.py", "test_gui.py", "eval_explore.py", ("eval_explore.py", "--win32")]
 
 
 def main():

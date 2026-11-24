@@ -200,3 +200,10 @@
   `write(path, name, entry) -> (action, backup)` (atomic, FILE.bak, other servers/keys kept, non-JSON refused), `suggest_targets`,
   `console_python` (pythonw -> python). Not loaded by serve/query (subprocess check in test).
 - CLI `mcp-config [--root R] [--name N] [--tools T] [--write FILE]`: prints the snippet, or merges into FILE. Tests: test_mcp_config (28).
+
+## S25 — optional GUI (tkinter, separate package)
+- New `mfcgraph_gui/` (logic.py no tkinter; app.py window; guide.py VI guide): tabs Hướng dẫn / Index; pick root, .vcxproj or projects
+  of a .sln (checkboxes), config/scope/codepage/define; "Chạy index" in a worker thread with live log (calls `cli.main(index …)`, so
+  settings.json is shared); MCP: target combo (VS .mcp.json / VS Code), "Xem trước & ghi" (preview dialog) and "Copy cấu hình".
+- CLI `gui [--root R]` imports tkinter/mfcgraph_gui lazily (missing tkinter -> message, exit 2). `mfcgraph-gui.bat` (double-click).
+- Tests: test_gui (25: logic, no-tk message, CLI never loads tkinter, window smoke + real index run). `.gitattributes` *.bat crlf.
