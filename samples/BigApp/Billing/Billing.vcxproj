@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32"><Configuration>Debug</Configuration><Platform>Win32</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32"><Configuration>Release</Configuration><Platform>Win32</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
+  </PropertyGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(SolutionDir)props\BigApp.props" />
+  </ImportGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions Condition="'$(Configuration)'=='Debug'">WIN32;_DEBUG;BILLING_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)'!='Debug'">WIN32;NDEBUG;BILLING_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="BillingSheet.cpp" />
+    <ClCompile Include="Customer.cpp" />
+    <ClCompile Include="InvoiceDlg.cpp" />
+    <ClCompile Include="InvoiceDoc.cpp" />
+    <ClCompile Include="InvoiceView.cpp" />
+    <ClCompile Include="PaymentWorker.cpp" />
+    <ClCompile Include="TaxCalc.cpp" />
+    <ClInclude Include="BillingSheet.h" />
+    <ClInclude Include="Customer.h" />
+    <ClInclude Include="InvoiceDlg.h" />
+    <ClInclude Include="InvoiceDoc.h" />
+    <ClInclude Include="InvoiceView.h" />
+    <ClInclude Include="PaymentWorker.h" />
+    <ClInclude Include="TaxCalc.h" />
+    <ClCompile Include="..\stdafx.cpp" />
+  </ItemGroup>
+</Project>

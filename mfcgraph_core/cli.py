@@ -13,6 +13,8 @@ USAGE = """mfcgraph %s - offline code graph for C++/MFC (no network, no telemetr
 Usage:
   python mfcgraph.py index <root> [--codepage 1258] [--exclude dir1;dir2] [-v]
                      [--define "A;B=1"] [--undef "C;D"] [--undef-unknown]   pick #ifdef/#else branches by macros
+                     [--vcxproj "a.vcxproj;b.sln"] [--config "Release|Win32"] [--vcxproj-scope listed|folders]
+                                                      defines + file list from Visual Studio projects
   python mfcgraph.py explore  <question | names | File.cpp:120 | ID | "error text"> [--budget N] [--scope DIR]
                                                       one call: relevant source + flow + impact (start here)
   python mfcgraph.py search   <text>                 classes, functions, IDs, menu/dialog captions
@@ -36,13 +38,15 @@ Common options:
 
 def _parse(argv):
     a = {"pos": [], "root": "", "index": "", "exclude": "", "codepage": 1258, "depth": -1, "lines": 80,
-         "no_code": False, "show_names": False, "verbose": False, "budget": 0, "scope": "", "define": "", "undef": "", "undef_unknown": False}
+         "no_code": False, "show_names": False, "verbose": False, "budget": 0, "scope": "", "define": "", "undef": "", "undef_unknown": False,
+         "vcxproj": "", "config": "", "vcxproj_scope": ""}
     i = 0
     while i < len(argv):
         s = argv[i]
         nxt = argv[i + 1] if i + 1 < len(argv) else ""
-        if s in ("--root", "--index", "--exclude", "--scope", "--define", "--undef"):
-            a[s[2:]] = nxt
+        if s in ("--root", "--index", "--exclude", "--scope", "--define", "--undef", "--vcxproj", "--config",
+                 "--vcxproj-scope"):
+            a[s[2:].replace("-", "_")] = nxt
             i += 2
             continue
         if s in ("--codepage", "--depth", "--lines", "--budget"):
@@ -75,6 +79,27 @@ def _setup_stdout():
             pass
 
 
+def _build(root, a, excludes):
+    from .pp_eval import PPConfig, parse_defines, parse_names
+    defines, undefs = parse_defines(a["define"]), parse_names(a["undef"])
+    if not a["vcxproj"]:
+        pp = PPConfig(defines, undefs, a["undef_unknown"])
+        return build_index(root, a["codepage"], excludes, verbose=a["verbose"], pp=pp)
+    from .vcxproj import expand_inputs, plan_index
+    inputs = [x.strip() for x in a["vcxproj"].split(";") if x.strip()]
+    projects = expand_inputs(inputs, a["config"] or None)
+    if not projects:
+        raise ValueError("no .vcxproj found in: " + a["vcxproj"])
+    # A project build undefines every macro it does not declare: compiler semantics by default.
+    plan = plan_index(root, projects, a["vcxproj_scope"] or "listed", defines, undefs, True, excludes)
+    for line in plan.lines:
+        print("  " + line)
+    if not plan.files:
+        raise ValueError("the projects list no source file under " + os.path.abspath(root))
+    return build_index(root, a["codepage"], excludes, verbose=a["verbose"], pp=plan.pp, files=plan.files,
+                       pp_by_file=plan.pp_by_file)
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     _setup_stdout()
@@ -92,9 +117,7 @@ def main(argv=None):
         excludes = [x.strip() for x in a["exclude"].split(";") if x.strip()]
         t0 = time.time()
         try:
-            from .pp_eval import PPConfig, parse_defines, parse_names
-            pp = PPConfig(parse_defines(a["define"]), parse_names(a["undef"]), a["undef_unknown"])
-            g = build_index(root, a["codepage"], excludes, verbose=a["verbose"], pp=pp)
+            g = _build(root, a, excludes)
         except ValueError as ex:
             sys.stderr.write("error: %s\n" % ex)
             return 2

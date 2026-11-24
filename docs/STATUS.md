@@ -181,3 +181,10 @@
 ## v0.4 plan
 - `docs/PLAN-v0.4.md`: easy run (read .vcxproj/.sln, remembered settings.json, mcp-config --write with backup, optional tkinter GUI
   in separate `mfcgraph_gui/`). Steps S22-S26. User chose: GUI may write .mcp.json only via its own button. Next: S22.
+
+## S22 — read Visual Studio projects (.vcxproj / .props / .sln)
+- New `mfcgraph_core/vcxproj.py`: `read_project(path, config, solution_dir, lenient)`, `read_solution`, `expand_inputs`, `plan_index`
+  (MSBuild conditions on Configuration/Platform, imported .props, implicit defines CharacterSet/UseOfMfc/DLL/RuntimeLibrary/platform).
+- `index --vcxproj "a.vcxproj;b.sln" [--config Release|Win32|Debug] [--vcxproj-scope listed|folders]`: files the projects list, each
+  file with its own project's defines (+ --define/--undef), undef-unknown on. `build_index(files=, pp_by_file=)`, `index.scan_tree`.
+- Samples: BigApp.sln, BigApp.vcxproj, Billing/Billing.vcxproj, props/BigApp.props (synthetic). Tests: `tests/test_vcxproj.py` (45).
