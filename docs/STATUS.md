@@ -173,3 +173,7 @@
 - explore_seed: a word equal to a whole function/class name (any case) is treated as ident (cached name set); an ident that
   matches no symbol is reported in Did you mean AND still tried as a word (typo queries now also return lexical matches).
 - Tests: test_explore_query (26), test_explore_seed (letter+digit project, 26); golden explore_typo updated. Evals unchanged (1.0/1.0).
+
+## Fix — golden tests failed on Windows checkouts (core.autocrlf=true)
+- Git turned `tests/golden/*.txt` into CRLF; golden_test compares bytes (`newline=""`), so every case failed though the tool output was right.
+- New `.gitattributes`: golden files `eol=lf`, `tests/data/*` binary (-text). Tests: ALL: OK on Windows.
