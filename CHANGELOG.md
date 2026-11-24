@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0 — 2026-11-24
+### Added
+- `index --vcxproj "a.vcxproj;b.sln" [--config "Release|Win32"|Debug] [--vcxproj-scope listed|folders]`: defines from
+  `PreprocessorDefinitions` of the chosen configuration (imported `.props` included, MSBuild conditions on
+  Configuration/Platform, implicit defines from CharacterSet / UseOfMfc / RuntimeLibrary / DLL / platform) and the
+  projects' file lists; each file uses its own project's defines. Unresolvable items are reported as notes.
+- Remembered settings: `index` saves its options in `<root>/.mfcgraph/settings.json`; `index <root>` alone reuses them.
+- `mcp-config [--root R] [--name N] [--tools T] [--write FILE]`: prints the MCP server entry or merges it into
+  `.mcp.json` / `.vscode/mcp.json` (other servers kept, `FILE.bak` backup, non-JSON files refused).
+- Optional GUI `python mfcgraph.py gui` / `mfcgraph-gui.bat` (tkinter, separate `mfcgraph_gui/` package): built-in
+  guide (Vietnamese), pick `.vcxproj` or projects of a `.sln`, run index with a live log, preview-and-write the MCP
+  config. Missing tkinter only disables `gui`.
+- Synthetic `BigApp.sln`, `BigApp.vcxproj`, `Billing/Billing.vcxproj`, `props/BigApp.props` samples.
+
+### Changed
+- The tool may now write an IDE MCP config file, only on explicit request (README security table updated).
+- `.gitattributes` keeps golden test files LF (tests failed on Windows checkouts with `core.autocrlf=true`).
+
 ## 0.3.0 — 2026-11-13
 ### Added
 - Win32 API support for codebases that mix MFC, Win32 and C:

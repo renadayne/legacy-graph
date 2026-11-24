@@ -207,3 +207,8 @@
   settings.json is shared); MCP: target combo (VS .mcp.json / VS Code), "Xem trước & ghi" (preview dialog) and "Copy cấu hình".
 - CLI `gui [--root R]` imports tkinter/mfcgraph_gui lazily (missing tkinter -> message, exit 2). `mfcgraph-gui.bat` (double-click).
 - Tests: test_gui (25: logic, no-tk message, CLI never loads tkinter, window smoke + real index run). `.gitattributes` *.bat crlf.
+
+## S26 — v0.4 docs, CHANGELOG, packaging
+- README (VI): §5.0 GUI + `--vcxproj` + settings.json + mcp-config; security table (MCP file only on request, xml.etree, GUI isolated,
+  ~6,500 + 560 lines); commands table; limits (.vcxproj evaluated partially, no .dsp); module/test list.
+- CHANGELOG 0.4.0, VERSION 0.4.0; `tools/package.py` adds `mfcgraph_gui/` and `mfcgraph-gui.bat`. v0.4 plan complete (S22–S26).
