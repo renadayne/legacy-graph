@@ -30,6 +30,9 @@ Usage:
   python mfcgraph.py diagnose [--show-names]         counts only, safe to share outside
   python mfcgraph.py status
   python mfcgraph.py serve                           MCP server on stdin/stdout (optional)
+  python mfcgraph.py mcp-config [--root R] [--name mfcgraph] [--tools explore] [--write FILE]
+                                                      print the MCP server entry; --write adds/updates it in FILE
+                                                      (.mcp.json / .vscode/mcp.json), other servers kept, FILE.bak saved
 
 Common options:
   --root <dir>    project root that contains .mfcgraph/ (default: search upward from cwd)
@@ -40,7 +43,8 @@ Common options:
 def _parse(argv):
     a = {"pos": [], "root": "", "index": "", "exclude": "", "codepage": 1258, "depth": -1, "lines": 80,
          "no_code": False, "show_names": False, "verbose": False, "budget": 0, "scope": "", "define": "", "undef": "", "undef_unknown": False,
-         "vcxproj": "", "config": "", "vcxproj_scope": "", "given": set()}
+         "vcxproj": "", "config": "", "vcxproj_scope": "", "given": set(),
+         "name": "", "write": "", "tools": ""}
     i = 0
     while i < len(argv):
         s = argv[i]
@@ -48,7 +52,7 @@ def _parse(argv):
             a["given"].add(s)
         nxt = argv[i + 1] if i + 1 < len(argv) else ""
         if s in ("--root", "--index", "--exclude", "--scope", "--define", "--undef", "--vcxproj", "--config",
-                 "--vcxproj-scope"):
+                 "--vcxproj-scope", "--name", "--write", "--tools"):
             a[s[2:].replace("-", "_")] = nxt
             i += 2
             continue
@@ -103,6 +107,37 @@ def _build(root, a, excludes):
                        pp_by_file=plan.pp_by_file)
 
 
+def _mcp_config(a):
+    from . import mcp_config
+    root = a["pos"][0] if a["pos"] else a["root"]
+    if not root:
+        found = find_index_upwards(os.getcwd())
+        root = os.path.dirname(os.path.dirname(found)) if found else ""
+    if not root or not os.path.isdir(root):
+        sys.stderr.write("error: give the indexed project folder: mcp-config --root <dir>\n")
+        return 2
+    if not os.path.isfile(index_path_for_root(root)):
+        sys.stderr.write("note: %s has no index yet; run 'index' before starting the IDE\n" % os.path.abspath(root))
+    name = a["name"] or mcp_config.DEFAULT_NAME
+    entry = mcp_config.server_entry(root, tools=a["tools"] or "explore")
+    if not a["write"]:
+        sys.stdout.write(mcp_config.snippet(name, entry))
+        for label, path in mcp_config.suggest_targets(root):
+            sys.stderr.write("  %s: %s\n" % (label, path))
+        return 0
+    try:
+        action, backup = mcp_config.write(a["write"], name, entry)
+    except (ValueError, OSError) as ex:
+        sys.stderr.write("error: %s\n" % ex)
+        return 2
+    print("%s server '%s' in %s" % (action, name, os.path.abspath(a["write"])))
+    if backup:
+        print("previous content saved as " + backup)
+    if action != "unchanged":
+        print("Restart the MCP server in your IDE (or reopen the solution) to use it.")
+    return 0
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     _setup_stdout()
@@ -139,6 +174,9 @@ def main(argv=None):
             st["classes"], st["functions.defined"], st["msgmap.entries"], st["rc.dialogs"], st["rc.menu_items"]))
         print("Run 'mfcgraph diagnose' for quality numbers.")
         return 0
+
+    if cmd == "mcp-config":
+        return _mcp_config(a)
 
     if a["index"]:
         ipath = a["index"]

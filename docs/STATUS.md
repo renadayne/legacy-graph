@@ -194,3 +194,9 @@
   to root when inside), config, vcxproj_scope). `load/save/apply/from_args/describe`, `CONFIG_OPTIONS`.
 - `index <root>` without setting options reuses them ("Using saved settings: …"); any setting option = fresh settings (no merge).
   Saved after every successful index; broken/odd-typed file ignored. `cli._parse` records `given` options. Tests: test_settings (12).
+
+## S24 — mcp-config (write the IDE MCP entry on request)
+- New `mfcgraph_core/mcp_config.py`: `server_entry`, `snippet`, `merge(text, name, entry) -> (text, added|updated|unchanged)`,
+  `write(path, name, entry) -> (action, backup)` (atomic, FILE.bak, other servers/keys kept, non-JSON refused), `suggest_targets`,
+  `console_python` (pythonw -> python). Not loaded by serve/query (subprocess check in test).
+- CLI `mcp-config [--root R] [--name N] [--tools T] [--write FILE]`: prints the snippet, or merges into FILE. Tests: test_mcp_config (28).
