@@ -1,0 +1,5 @@
+# Golden outputs and index fixtures are compared byte for byte: keep LF on every OS
+# (core.autocrlf=true on Windows would otherwise turn them into CRLF and fail golden_test.py).
+tests/golden/*.txt text eol=lf
+tests/data/* -text
+*.bat text eol=crlf

@@ -1,6 +1,7 @@
 """Build dist/mfcgraph-py-<version>.zip (standard library zipfile only).
 
-Includes the launcher, mfcgraph_core/, tests/, samples/, docs/, README.md, CHANGELOG.md, CLAUDE.md.
+Includes the launchers (mfcgraph.py, mfcgraph-gui.bat), mfcgraph_core/, mfcgraph_gui/, tests/, samples/, docs/,
+README.md, CHANGELOG.md, CLAUDE.md.
 Excludes __pycache__, *.pyc, .mfcgraph/ (index files contain code structure), cpp-reference/, dist/, .git/, .claude/.
 
 Run:  python3 tools/package.py [--out DIR]
@@ -15,8 +16,8 @@ sys.path.insert(0, ROOT)
 
 from mfcgraph_core import VERSION  # noqa: E402
 
-INCLUDE = ["mfcgraph.py", "__main__.py", "README.md", "CHANGELOG.md", "CLAUDE.md", "mfcgraph_core", "tests", "samples", "docs",
-           "tools"]
+INCLUDE = ["mfcgraph.py", "__main__.py", "mfcgraph-gui.bat", "README.md", "CHANGELOG.md", "CLAUDE.md", "mfcgraph_core",
+           "mfcgraph_gui", "tests", "samples", "docs", "tools"]
 EXCLUDE_DIRS = {"__pycache__", ".mfcgraph", "cpp-reference", "dist", ".git", ".claude"}
 EXCLUDE_EXT = {".pyc", ".pyo"}
 

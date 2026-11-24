@@ -173,3 +173,42 @@
 - explore_seed: a word equal to a whole function/class name (any case) is treated as ident (cached name set); an ident that
   matches no symbol is reported in Did you mean AND still tried as a word (typo queries now also return lexical matches).
 - Tests: test_explore_query (26), test_explore_seed (letter+digit project, 26); golden explore_typo updated. Evals unchanged (1.0/1.0).
+
+## Fix — golden tests failed on Windows checkouts (core.autocrlf=true)
+- Git turned `tests/golden/*.txt` into CRLF; golden_test compares bytes (`newline=""`), so every case failed though the tool output was right.
+- New `.gitattributes`: golden files `eol=lf`, `tests/data/*` binary (-text). Tests: ALL: OK on Windows.
+
+## v0.4 plan
+- `docs/PLAN-v0.4.md`: easy run (read .vcxproj/.sln, remembered settings.json, mcp-config --write with backup, optional tkinter GUI
+  in separate `mfcgraph_gui/`). Steps S22-S26. User chose: GUI may write .mcp.json only via its own button. Next: S22.
+
+## S22 — read Visual Studio projects (.vcxproj / .props / .sln)
+- New `mfcgraph_core/vcxproj.py`: `read_project(path, config, solution_dir, lenient)`, `read_solution`, `expand_inputs`, `plan_index`
+  (MSBuild conditions on Configuration/Platform, imported .props, implicit defines CharacterSet/UseOfMfc/DLL/RuntimeLibrary/platform).
+- `index --vcxproj "a.vcxproj;b.sln" [--config Release|Win32|Debug] [--vcxproj-scope listed|folders]`: files the projects list, each
+  file with its own project's defines (+ --define/--undef), undef-unknown on. `build_index(files=, pp_by_file=)`, `index.scan_tree`.
+- Samples: BigApp.sln, BigApp.vcxproj, Billing/Billing.vcxproj, props/BigApp.props (synthetic). Tests: `tests/test_vcxproj.py` (45).
+
+## S23 — remembered index settings
+- New `mfcgraph_core/settings.py`: `<root>/.mfcgraph/settings.json` (codepage, exclude, define, undef, undef_unknown, vcxproj (relative
+  to root when inside), config, vcxproj_scope). `load/save/apply/from_args/describe`, `CONFIG_OPTIONS`.
+- `index <root>` without setting options reuses them ("Using saved settings: …"); any setting option = fresh settings (no merge).
+  Saved after every successful index; broken/odd-typed file ignored. `cli._parse` records `given` options. Tests: test_settings (12).
+
+## S24 — mcp-config (write the IDE MCP entry on request)
+- New `mfcgraph_core/mcp_config.py`: `server_entry`, `snippet`, `merge(text, name, entry) -> (text, added|updated|unchanged)`,
+  `write(path, name, entry) -> (action, backup)` (atomic, FILE.bak, other servers/keys kept, non-JSON refused), `suggest_targets`,
+  `console_python` (pythonw -> python). Not loaded by serve/query (subprocess check in test).
+- CLI `mcp-config [--root R] [--name N] [--tools T] [--write FILE]`: prints the snippet, or merges into FILE. Tests: test_mcp_config (28).
+
+## S25 — optional GUI (tkinter, separate package)
+- New `mfcgraph_gui/` (logic.py no tkinter; app.py window; guide.py VI guide): tabs Hướng dẫn / Index; pick root, .vcxproj or projects
+  of a .sln (checkboxes), config/scope/codepage/define; "Chạy index" in a worker thread with live log (calls `cli.main(index …)`, so
+  settings.json is shared); MCP: target combo (VS .mcp.json / VS Code), "Xem trước & ghi" (preview dialog) and "Copy cấu hình".
+- CLI `gui [--root R]` imports tkinter/mfcgraph_gui lazily (missing tkinter -> message, exit 2). `mfcgraph-gui.bat` (double-click).
+- Tests: test_gui (25: logic, no-tk message, CLI never loads tkinter, window smoke + real index run). `.gitattributes` *.bat crlf.
+
+## S26 — v0.4 docs, CHANGELOG, packaging
+- README (VI): §5.0 GUI + `--vcxproj` + settings.json + mcp-config; security table (MCP file only on request, xml.etree, GUI isolated,
+  ~6,500 + 560 lines); commands table; limits (.vcxproj evaluated partially, no .dsp); module/test list.
+- CHANGELOG 0.4.0, VERSION 0.4.0; `tools/package.py` adds `mfcgraph_gui/` and `mfcgraph-gui.bat`. v0.4 plan complete (S22–S26).

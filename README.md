@@ -1,10 +1,12 @@
-# mfcgraph 0.3 (bản Python)
+# mfcgraph 0.4 (bản Python)
 
 Công cụ dựng **đồ thị mã nguồn** cho codebase C++/MFC lâu năm, chạy **hoàn toàn offline**. Mục đích là giúp AI agent (GitHub Copilot) hỏi đúng chỗ thay vì đọc cả chục file, nhờ đó tốn ít token và credit hơn.
 
 v0.2 thêm một lệnh/tool chính: `explore` (`mfc_explore`). Từ một câu hỏi, tên hàm, ID hoặc thông báo lỗi, `explore` trả về mã nguồn liên quan, luồng gọi và phạm vi ảnh hưởng trong một lần gọi.
 
 v0.3 hỗ trợ codebase trộn MFC, Win32 API và file C. Công cụ nhận ra window/dialog procedure dùng `switch/case`, `HANDLE_MSG`, `DialogBox` và các hàm callback truyền cho Windows. File `.c` được đọc theo cú pháp C: các từ khóa chỉ có trong C++ như `new`, `class`, `this` là tên thường. Với `#ifdef/#else`, công cụ chọn nhánh theo macro bạn khai báo.
+
+v0.4 giúp chạy dễ hơn, không quên bước. Công cụ tự đọc `.vcxproj`/`.sln` để lấy define và danh sách file. Cấu hình index được nhớ trong `settings.json`, lần sau chỉ cần `index <root>`. Lệnh `mcp-config` ghi sẵn cấu hình MCP. Có thêm **GUI tùy chọn** (`python mfcgraph.py gui` hoặc bấm đúp `mfcgraph-gui.bat`), chỉ dùng `tkinter` có sẵn trong Python, không cần `pip install`. Xem mục 5.0.
 
 - **Chỉ cần Python 3.7 trở lên**, đã có sẵn trên máy. **Chỉ dùng thư viện chuẩn của Python**: không `pip install`, không thư viện ngoài, không kết nối internet.
 - **Không cần build**, không có file `.exe` nào để ký số. Chạy thẳng `python mfcgraph.py ...`.
@@ -23,13 +25,14 @@ Công cụ hiểu được những chỗ mà công cụ thông thường bỏ s�
 
 | Cam kết | Cách kiểm chứng |
 | --- | --- |
-| Không có code mạng | `findstr /s /i "socket urllib http requests ftplib smtplib subprocess ctypes pickle" mfcgraph_core\*.py` chỉ ra đúng một dòng comment trong `mcp.py` |
-| Chỉ dùng thư viện chuẩn | Toàn bộ lệnh `import` nằm đầu mỗi file: `os`, `sys`, `re`, `json`, `time`, `hashlib`, `unicodedata`, `difflib`, `collections` và các module nội bộ `mfcgraph_core`. Các module `explore*.py` cũng chỉ import thư viện chuẩn |
-| Không telemetry, không tự cập nhật | Toàn bộ mã nguồn khoảng 5.700 dòng Python (kể cả comment) trong `mfcgraph_core/`, đọc hết được |
+| Không có code mạng | `findstr /s /i "socket urllib http requests ftplib smtplib subprocess ctypes pickle" mfcgraph_core\*.py mfcgraph_gui\*.py` chỉ ra đúng một dòng comment trong `mcp.py` |
+| Chỉ dùng thư viện chuẩn | Toàn bộ lệnh `import` nằm đầu mỗi file: `os`, `sys`, `re`, `io`, `json`, `time`, `shutil`, `hashlib`, `unicodedata`, `difflib`, `collections`, `contextlib`, `xml.etree.ElementTree` (đọc `.vcxproj`, không tải entity từ ngoài) và các module nội bộ `mfcgraph_core`. GUI (`mfcgraph_gui/`) thêm `tkinter`, `threading`, `queue` |
+| GUI tách riêng | `mfcgraph_gui/` chỉ được nạp khi gọi lệnh `gui`. Không có `tkinter` thì chỉ lệnh `gui` báo lỗi; CLI và MCP không import GUI (có test kiểm tra) |
+| Không telemetry, không tự cập nhật | Toàn bộ mã nguồn khoảng 6.500 dòng Python trong `mfcgraph_core/` và 560 dòng trong `mfcgraph_gui/` (kể cả comment), đọc hết được |
 | Cái chạy chính là cái đọc | Không có bước build. File `.py` SA review là file chạy |
 | MCP không mở cổng | MCP (tùy chọn) giao tiếp qua stdin/stdout; code MCP chỉ được nạp khi gọi lệnh `serve` |
-| Không sửa cấu hình máy | Không ghi vào config của IDE/Copilot |
-| Chỉ ghi một chỗ | Ghi duy nhất `<root>\.mfcgraph\index.mfg` (file văn bản, đọc và diff được) |
+| Không tự sửa cấu hình máy | Chỉ ghi file cấu hình MCP của IDE khi người dùng yêu cầu rõ: `mcp-config --write <file>` hoặc nút "Xem trước & ghi" trong GUI (có xem trước). Chỉ thêm/sửa mục `mfcgraph`, giữ nguyên server khác, lưu bản cũ `<file>.bak`, từ chối file không phải JSON thuần. Không đụng registry hay cấu hình khác |
+| Ghi ít chỗ | `index` chỉ ghi `<root>\.mfcgraph\index.mfg` và `<root>\.mfcgraph\settings.json` (file văn bản, đọc và diff được); thêm file MCP ở dòng trên khi được yêu cầu |
 
 Có thể kiểm tra thêm bằng Process Monitor (lọc Process Name = python.exe, Operation chứa "TCP"/"UDP").
 
@@ -308,6 +311,48 @@ Text "エクスポートに失敗しました": ExportDlg.cpp:27 (in Export_OnCo
 
 ## 5. Chạy trên dự án thật
 
+### 5.0. Cách nhanh: GUI hoặc .vcxproj (v0.4)
+
+**GUI** (tùy chọn): bấm đúp `mfcgraph-gui.bat`, hoặc:
+
+```bat
+python mfcgraph.py gui
+```
+
+Tab **Hướng dẫn** giải thích từng bước. Tab **Index**:
+1. Chọn thư mục gốc (root), rồi **Thêm .vcxproj...** hoặc **Thêm từ .sln...** (tick các project cần, ví dụ module có bug và `Common`). Không cần chọn cả app.
+2. Chọn cấu hình build (để trống = `Release|Win32`), codepage (932 cho Shift-JIS), define thêm nếu cần.
+3. Bấm **Chạy index**. Log hiện số file, số define và các "note" (những gì không tính được trong `.vcxproj`).
+4. Ở khung **Kết nối Copilot (MCP)**: chọn file đích (`.mcp.json` của Visual Studio hoặc `.vscode\mcp.json` của VS Code), bấm **Xem trước & ghi vào mcp.json...** rồi **Ghi**. Hoặc bấm **Copy cấu hình MCP** để tự dán.
+
+Nếu máy không có `tkinter` (bộ cài Python bỏ tick "tcl/tk and IDLE"), lệnh `gui` báo lỗi kèm cách sửa. Mọi lệnh khác vẫn chạy bình thường.
+
+**Dòng lệnh với .vcxproj** (cùng kết quả với GUI):
+
+```bat
+python mfcgraph.py index D:\src\MyProduct --vcxproj "Billing\Billing.vcxproj;Common\Common.vcxproj" --config "Release|Win32" --codepage 932
+python mfcgraph.py mcp-config --root D:\src\MyProduct --write D:\src\MyProduct\.mcp.json
+```
+
+- `--vcxproj`: danh sách `.vcxproj` hoặc `.sln`, cách nhau bằng `;`. `.sln` lấy mọi project trong đó.
+- Define lấy từ `PreprocessorDefinitions` của cấu hình đã chọn, kể cả file `.props` được import, cộng các define ngầm định của trình biên dịch (`UNICODE`/`_MBCS` theo CharacterSet, `_AFXDLL` theo UseOfMfc, `_DEBUG`/`_DLL` theo RuntimeLibrary, `_WIN64` cho x64). Mỗi file dùng define của project chứa nó. Tự bật `--undef-unknown`.
+- `--config`: `"Release|Win32"`, `"Release|x64"` hoặc chỉ `Debug`. Mặc định `Release|Win32`.
+- `--vcxproj-scope listed` (mặc định): chỉ các file project liệt kê. `folders`: mọi file nguồn trong thư mục chứa project.
+- `--define`/`--undef` cộng thêm vào define của project.
+- Root (thư mục gốc) phải chứa các file cần index; file nằm ngoài root bị bỏ qua và được đếm trong log.
+
+**Cấu hình được nhớ**: mỗi lần `index` lưu tham số vào `<root>\.mfcgraph\settings.json`. Lần sau chỉ cần:
+
+```bat
+python mfcgraph.py index D:\src\MyProduct
+```
+
+Dòng đầu sẽ là `Using saved settings: ...`. Truyền bất kỳ tham số cấu hình nào (`--codepage`, `--vcxproj`, `--define`...) thì cấu hình mới chỉ gồm các tham số đó.
+
+**`mcp-config`**: không có `--write` thì chỉ in đoạn JSON để dán tay. `--name` đặt tên server khác (dùng nhiều root cùng lúc), `--tools` đặt `MFCGRAPH_MCP_TOOLS` (mặc định `explore`).
+
+### 5.1. Quét cả cây thư mục (cách cũ)
+
 ```bat
 python mfcgraph.py index D:\src\MyProduct --codepage 1258 -v
 python mfcgraph.py diagnose --root D:\src\MyProduct
@@ -332,7 +377,7 @@ Cú pháp:
 python mfcgraph.py index <root> [--define "A;B=1"] [--undef "C;D"] [--undef-unknown]
 ```
 
-Khuyến nghị: copy `PreprocessorDefinitions` của cấu hình Release từ file `.vcxproj` vào `--define`, rồi thêm `--undef-unknown`.
+Khuyến nghị: dùng `--vcxproj` (mục 5.0) để công cụ tự lấy define. Nếu không dùng được, copy `PreprocessorDefinitions` của cấu hình Release từ file `.vcxproj` vào `--define`, rồi thêm `--undef-unknown`.
 
 Số điều kiện `#if` được tính và số điều kiện không tính được xuất hiện trong `diagnose`. Ví dụ với `samples/Win32App`, chạy hai lần:
 
@@ -380,6 +425,8 @@ Sau đó chỉ cần gõ `mfcgraph trace Export`.
 | `context <hàm> [--lines 80]` | Gói ngữ cảnh Markdown để đưa cho AI |
 | `diagnose [--show-names]` | Số liệu chất lượng (chỉ con số) |
 | `status` | Thông tin index |
+| `gui [--root DIR]` | Cửa sổ tùy chọn: hướng dẫn, chọn `.vcxproj`/`.sln`, chạy index, ghi cấu hình MCP |
+| `mcp-config [--root DIR] [--name N] [--tools T] [--write FILE]` | In hoặc ghi mục `mfcgraph` vào `.mcp.json` / `.vscode\mcp.json` |
 
 Mỗi lời gọi được gắn **độ tin cậy**:
 - `exact`: gọi có tên lớp, qua `this`, hoặc biến đã biết kiểu.
@@ -402,6 +449,8 @@ Mặc định MCP chỉ mở tool `mfc_explore`. Muốn bật thêm tool, đặt
 - `all`: bật mọi tool.
 
 Các tool có thể bật: `mfc_explore`, `mfc_refs`, `mfc_search`, `mfc_node`, `mfc_callers`, `mfc_callees`, `mfc_impact`, `mfc_trace`, `mfc_context`, `mfc_msgmap`, `mfc_status`.
+
+Cách nhanh nhất: nút **Xem trước & ghi vào mcp.json...** trong GUI, hoặc `python mfcgraph.py mcp-config --root C:\src\MyApp --write C:\src\MyApp\.mcp.json`. Muốn tự viết thì dùng mẫu dưới đây.
 
 Visual Studio 2022: tạo file `.mcp.json` trong thư mục solution:
 
@@ -464,7 +513,7 @@ Khi thấy công cụ hiểu sai một đoạn code, hãy viết lại cấu tr�
 
 - Là bộ phân tích **dựa trên mẫu** (heuristic), không phải trình biên dịch: không khai triển macro tự định nghĩa, không hiểu template phức tạp. Chỗ không chắc được gắn nhãn `ambiguous`/`likely`.
 - Với `#if/#ifdef`, công cụ lấy **nhánh đầu tiên** trừ khi dùng `--define`, `--undef` hoặc `--undef-unknown` (xem mục 5). `#if 0` luôn bị bỏ qua.
-- Chưa đọc file project (`.vcxproj/.dsp`) mà quét toàn bộ cây thư mục.
+- Đọc `.vcxproj` ở mức cần cho index: không chạy MSBuild, không tính define riêng của từng file `.cpp`, điều kiện MSBuild phức tạp được coi là đúng (có "note" trong log). Chưa đọc `.dsp` (VC6).
 - Chưa có index tăng dần: muốn cập nhật thì chạy lại `index`.
 - Chưa liên kết virtual dispatch từ lớp cha xuống lớp con.
 
@@ -490,6 +539,11 @@ mfcgraph_core/cli.py        giao diện dòng lệnh
 mfcgraph_core/cmode.py      chế độ C cho file .c: từ khóa C++ (new, class, this…) thành tên thường
 mfcgraph_core/pp_eval.py    tính điều kiện #if theo --define, --undef, --undef-unknown
 mfcgraph_core/win32.py      case trong procedure, HANDLE_MSG, DialogBox và wiring callback
+mfcgraph_core/vcxproj.py    đọc .vcxproj / .props / .sln: define theo cấu hình, danh sách file
+mfcgraph_core/settings.py   nhớ cấu hình index trong <root>/.mfcgraph/settings.json
+mfcgraph_core/mcp_config.py ghi mục mfcgraph vào .mcp.json khi được yêu cầu (gộp, sao lưu .bak)
+mfcgraph_gui/               GUI tùy chọn (tkinter): logic.py, app.py, guide.py; chỉ nạp khi gọi lệnh gui
+mfcgraph-gui.bat            bấm đúp để mở GUI
 tests/test_mfcgraph.py      kiểm thử trên samples/LegacyApp
 tests/run_all.py            chạy mọi bộ kiểm thử
 tests/golden_test.py        so sánh output CLI với tests/golden/*.txt (--update để ghi lại)
@@ -500,6 +554,10 @@ samples/Win32App/           dự án mẫu Win32 + C (26 file, Shift-JIS, resour
 tests/scenarios_win32.json  13 kịch bản cho Win32App
 tests/test_pp.py            kiểm thử tính điều kiện #if
 tests/test_win32.py         kiểm thử dispatch và wiring Win32
+tests/test_vcxproj.py       kiểm thử đọc .vcxproj/.props/.sln và index --vcxproj
+tests/test_settings.py      kiểm thử settings.json
+tests/test_mcp_config.py    kiểm thử mcp-config (gộp, sao lưu, từ chối JSON hỏng)
+tests/test_gui.py           kiểm thử GUI (logic, cô lập với CLI, thiếu tkinter, mở cửa sổ thật nếu có màn hình)
 ```
 
 Định dạng index giống hệt bản C++: hai bản đã được đối chiếu và cho kết quả trùng khớp trên gần 4.000 file C++ thật.

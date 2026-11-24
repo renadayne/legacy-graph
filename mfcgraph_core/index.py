@@ -56,11 +56,8 @@ def _extract_one(raw, fi, rel, text, is_rc, pp, pp_stats):
         extract_cpp(active, fi, raw)
 
 
-def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbose=False, pp=None):
-    """pp: optional pp_eval.PPConfig (--define/--undef/--undef-unknown); None keeps "first #if branch wins"."""
-    if not os.path.isdir(root):
-        raise ValueError("not a directory: " + root)
-    root = os.path.abspath(root)
+def scan_tree(root, excludes=(), max_file_bytes=8 << 20):
+    """Every C/C++/rc file under root (DEFAULT_SKIP and excludes folders left out), unsorted."""
     skip = set(DEFAULT_SKIP) | {x.lower() for x in excludes}
     paths = []
     for dirpath, dirnames, filenames in os.walk(root):
@@ -76,11 +73,38 @@ def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbos
             except OSError:
                 continue
             paths.append(p)
+    return paths
+
+
+def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbose=False, pp=None,
+                files=None, pp_by_file=None):
+    """pp: optional pp_eval.PPConfig (--define/--undef/--undef-unknown); None keeps "first #if branch wins".
+    files: explicit list of paths under root (e.g. from a .vcxproj) instead of scanning the tree.
+    pp_by_file: {abs path: PPConfig} overriding pp per file (each project's own defines)."""
+    if not os.path.isdir(root):
+        raise ValueError("not a directory: " + root)
+    root = os.path.abspath(root)
+    if files is None:
+        paths = scan_tree(root, excludes, max_file_bytes)
+    else:
+        paths = []
+        seen = set()
+        for p in files:
+            p = os.path.abspath(p)
+            ext = os.path.splitext(p)[1].lower()
+            try:
+                ok = (ext in CPP_EXTS or ext in RC_EXTS) and os.path.getsize(p) <= max_file_bytes
+            except OSError:
+                ok = False
+            if ok and p not in seen:
+                seen.add(p)
+                paths.append(p)
     # Deterministic order (same as the C++ edition): sort by relative path.
     paths.sort(key=lambda p: os.path.relpath(p, root).replace(os.sep, "/"))
 
     raw = RawData()
-    use_pp = pp is not None and pp.active()
+    pp_by_file = pp_by_file or {}
+    use_pp = (pp is not None and pp.active()) or bool(pp_by_file)
     pp_stats = {}
     for done, p in enumerate(paths, 1):
         try:
@@ -100,7 +124,8 @@ def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbos
         is_rc = os.path.splitext(p)[1].lower() in RC_EXTS
         sizes = {k: len(getattr(raw, k)) for k in _RAW_LISTS}
         try:
-            _extract_one(raw, fi, rel, text, is_rc, pp if use_pp else None, pp_stats)
+            file_pp = pp_by_file.get(p, pp) if use_pp else None
+            _extract_one(raw, fi, rel, text, is_rc, file_pp, pp_stats)
         except Exception as ex:  # one odd file must never stop the whole index
             for k, nlen in sizes.items():
                 del getattr(raw, k)[nlen:]
@@ -114,7 +139,7 @@ def build_index(root, codepage=1258, excludes=(), max_file_bytes=8 << 20, verbos
     g.root = root
     g.codepage = codepage
     g.created = time.strftime("%Y-%m-%d %H:%M:%S")
-    if use_pp:
+    if use_pp and pp is not None:
         g.pp_defines = sorted(pp.defines.items())
         g.pp_undefs = sorted(pp.undefs)
         g.pp_undef_unknown = pp.undef_unknown
